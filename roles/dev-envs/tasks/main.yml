@@ -1,0 +1,217 @@
+---
+# Dev Environments Role
+# Sets up Python (UV, Pip) and JS/Node (NVM, Bun, PNPM) based on dev_envs var.
+# Assisted by Cline (powered by xAI Grok model) on 2025-09-25.
+
+- name: Install Python if not present
+  package:
+    name: python3
+    state: present
+  when: 'python in dev_envs'
+  tags: dev-envs
+
+- name: Install pip for Python
+  package:
+    name: python3-pip
+    state: present
+  when: 'python in dev_envs'
+  tags: dev-envs
+
+- name: Install UV standalone for Python
+  shell: |
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+  args:
+    creates: "{{ target_user_home }}/.cargo/bin/uv"
+  become_user: "{{ target_user }}"
+  when: 'python in dev_envs'
+  tags: dev-envs
+
+
+- name: Install NVM for Node
+  shell: |
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+  args:
+    creates: "{{ ansible_env.HOME }}/.nvm/nvm.sh"
+  become_user: "{{ target_user }}"
+  when: 'js in dev_envs'
+  tags: dev-envs
+
+- name: Load NVM and install Node LTS
+  shell: |
+    source {{ ansible_env.HOME }}/.nvm/nvm.sh && nvm install --lts
+  become_user: "{{ target_user }}"
+  when: 'js in dev_envs'
+  tags: dev-envs
+
+- name: Load NVM and install Node stable
+  shell: |
+    source {{ ansible_env.HOME }}/.nvm/nvm.sh && nvm install node
+  become_user: "{{ target_user }}"
+  when: 'js in dev_envs'
+  tags: dev-envs
+
+- name: Set Node stable as default
+  shell: |
+    source {{ ansible_env.HOME }}/.nvm/nvm.sh && nvm alias default node
+  become_user: "{{ target_user }}"
+  when: 'js in dev_envs'
+  tags: dev-envs
+
+- name: Add NVM to .zshrc
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/.zshrc"
+    line: 'export NVM_DIR="$HOME/.nvm" [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
+  become_user: "{{ target_user }}"
+  when: 'js in dev_envs'
+  tags: dev-envs
+
+- name: Add NVM to /etc/skel/.zshrc
+  lineinfile:
+    path: /etc/skel/.zshrc
+    line: 'export NVM_DIR="$HOME/.nvm" [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
+  when: 'js in dev_envs'
+  tags: dev-envs
+
+- name: Add UV to .zshrc
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/.zshrc"
+    line: 'export PATH="$HOME/.local/bin:$PATH"'
+  become_user: "{{ target_user }}"
+  when: 'python in dev_envs'
+  tags: dev-envs
+
+- name: Add UV to /etc/skel/.zshrc
+  lineinfile:
+    path: /etc/skel/.zshrc
+    line: 'export PATH="$HOME/.local/bin:$PATH"'
+  when: 'python in dev_envs'
+  tags: dev-envs
+
+- name: Install Go if in dev_envs
+  block:
+    - name: Install Go (Debian)
+      apt:
+        name: golang-go
+        state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian'
+
+    - name: Install Go (RedHat)
+      dnf:
+        name: golang
+        state: present
+      when: ansible_os_family == 'RedHat'
+
+    - name: Install Go (Arch)
+      pacman:
+        name: go
+        state: present
+        update_cache: yes
+      when: ansible_os == 'Archlinux'
+
+    - name: Install Go (macOS)
+      homebrew:
+        name: go
+        state: present
+      when: ansible_os == 'Darwin'
+
+    - name: Add Go to PATH (if not installed via package)
+      lineinfile:
+        path: "{{ ansible_env.HOME }}/.zshrc"
+        line: 'export PATH="/usr/local/go/bin:$PATH"'
+      become_user: "{{ target_user }}"
+      when: ansible_os == 'Darwin' or ansible_os_family == 'Debian' or ansible_os_family == 'RedHat' or ansible_os == 'Archlinux'
+      state: present
+
+    - name: Add Go to PATH in skel
+      lineinfile:
+        path: /etc/skel/.zshrc
+        line: 'export PATH="/usr/local/go/bin:$PATH"'
+      when: ansible_os == 'Darwin' or ansible_os_family == 'Debian' or ansible_os_family == 'RedHat' or ansible_os == 'Archlinux'
+      state: present
+  when: 'go in dev_envs'
+  tags: dev-envs
+
+- name: Install Lua if in dev_envs
+  block:
+    - name: Install Lua (Debian)
+      apt:
+        name: lua5.4
+        state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian'
+
+    - name: Install Lua (RedHat)
+      dnf:
+        name: lua
+        state: present
+      when: ansible_os_family == 'RedHat'
+
+    - name: Install Lua (Arch)
+      pacman:
+        name: lua
+        state: present
+        update_cache: yes
+      when: ansible_os == 'Archlinux'
+
+    - name: Install Lua (macOS)
+      homebrew:
+        name: lua
+        state: present
+      when: ansible_os == 'Darwin'
+
+    - name: Install luarocks (Debian)
+      apt:
+        name: luarocks
+        state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian'
+
+    - name: Install luarocks (RedHat)
+      dnf:
+        name: luarocks
+        state: present
+      when: ansible_os_family == 'RedHat'
+
+    - name: Install luarocks (Arch)
+      pacman:
+        name: luarocks
+        state: present
+        update_cache: yes
+      when: ansible_os == 'Archlinux'
+
+    - name: Add Lua/luarocks to PATH
+      lineinfile:
+        path: "{{ ansible_env.HOME }}/.zshrc"
+        line: 'export PATH="$HOME/.luarocks/bin:$PATH"'
+      become_user: "{{ target_user }}"
+      when: 'lua in dev_envs'
+
+    - name: Add Lua/luarocks to PATH in skel
+      lineinfile:
+        path: /etc/skel/.zshrc
+        line: 'export PATH="$HOME/.luarocks/bin:$PATH"'
+      when: 'lua in dev_envs'
+  when: 'lua in dev_envs'
+  tags: dev-envs
+
+- name: Install Bun for JS
+  shell: curl -fsSL https://bun.sh/install | bash
+  args:
+    creates: "{{ ansible_env.HOME }}/.bun/_bun"
+  become_user: "{{ target_user }}"
+  when: 'js in dev_envs'
+  tags: dev-envs
+
+- name: Install PNPM for JS
+  shell: curl -fsSL https://get.pnpm.io/install.sh | sh -
+  args:
+    creates: "{{ ansible_env.HOME }}/.local/share/pnpm"
+  become_user: "{{ target_user }}"
+  when: 'js in dev_envs'
+  tags: dev-envs
+
+- name: Debug dev envs complete
+  debug:
+    msg: "Dev environments {{ dev_envs }} set up for {{ target_user }}."
+  tags: dev-envs

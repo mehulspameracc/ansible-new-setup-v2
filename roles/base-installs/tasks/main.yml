@@ -1,0 +1,82 @@
+---
+# Base Installs Role
+# Installs core applications using the detected package_mgr.
+# Assisted by Cline (powered by xAI Grok model) on 2025-09-25.
+
+- name: Install basic apps on Debian-based (using apt/nala)
+  apt:
+    name: "{{ basic_apps + ['bat', 'btop', 'lsd'] }}"  # batcat is bat in repos
+    state: present
+    update_cache: yes
+  when: ansible_os_family == 'Debian'
+  tags: base-installs
+
+- name: Install basic apps on RedHat/Fedora/Rocky (using dnf/yum)
+  dnf:
+    name: "{{ basic_apps + ['bat', 'btop', 'lsd'] }}"
+    state: present
+  when: ansible_os_family == 'RedHat'
+  tags: base-installs
+
+- name: Install basic apps on Arch (using pacman)
+  pacman:
+    name: "{{ basic_apps + ['bat', 'btop', 'lsd'] }}"
+    state: present
+    update_cache: yes
+  when: ansible_os == 'Archlinux'
+  tags: base-installs
+
+- name: Install basic apps on macOS (using homebrew)
+  homebrew:
+    name: "{{ basic_apps + ['bat', 'btop', 'lsd', 'magic-wormhole'] }}"  # wormhole-william or magic-wormhole
+    state: present
+  when: ansible_os == 'Darwin'
+  tags: base-installs
+
+- name: Install magic-wormhole (Debian)
+  apt:
+    name: magic-wormhole
+    state: present
+  when: ansible_os_family == 'Debian'
+  tags: base-installs
+
+- name: Install magic-wormhole (RedHat)
+  dnf:
+    name: python3-magic-wormhole
+    state: present
+  when: ansible_os_family == 'RedHat'
+  tags: base-installs
+
+- name: Install magic-wormhole (Arch)
+  pacman:
+    name: python-magic-wormhole
+    state: present
+  when: ansible_os == 'Archlinux'
+  tags: base-installs
+
+- name: Install magic-wormhole (macOS)
+  homebrew:
+    name: magic-wormhole
+    state: present
+  when: ansible_os == 'Darwin'
+  tags: base-installs
+
+- name: Install Netdata (1-liner for all)
+  shell: |
+    bash <(curl -Ss https://get.netdata.cloud/kickstart.sh) --dont-wait --disable-telemetry
+  args:
+    creates: /usr/sbin/netdata
+  become: true
+  tags: base-installs
+
+- name: Start and enable Netdata
+  systemd:
+    name: netdata
+    state: started
+    enabled: yes
+  tags: base-installs
+
+- name: Debug base installs complete
+  debug:
+    msg: "Base apps installed via {{ package_mgr }} on {{ ansible_os }}."
+  tags: base-installs

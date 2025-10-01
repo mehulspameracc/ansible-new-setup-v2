@@ -1,0 +1,27 @@
+---
+# OS Detection and Package Manager Setup Role
+# Sets package_mgr var based on distro for use in other roles.
+# Assisted by Cline (powered by xAI Grok model) on 2025-09-25.
+
+- name: Detect OS family and set package manager
+  set_fact:
+    package_mgr: >-
+      {%- if ansible_os_family == 'Debian' -%}
+      nala
+      {%- elif ansible_os_family == 'RedHat' -%}
+      dnf
+      {%- elif ansible_os == 'Archlinux' -%}
+      pacman
+      {%- elif ansible_os == 'Darwin' -%}
+      brew
+      {%- else -%}
+      apt  # Fallback
+      {%- endif -%}
+  tags: os-detection
+
+- name: Debug package manager
+  debug:
+    msg: "Detected OS: {{ ansible_os }} (family: {{ ansible_os_family }}), using package_mgr: {{ package_mgr }}"
+  tags: os-detection
+
+# Note: Nala install in prerequisites role; dnf tweaks there too.

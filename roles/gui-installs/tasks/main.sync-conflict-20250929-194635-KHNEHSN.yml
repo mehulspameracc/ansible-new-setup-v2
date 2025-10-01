@@ -1,0 +1,53 @@
+---
+# GUI Installs Role
+# Installs GUI apps on Linux/macOS when enable_gui is true.
+# Assisted by Cline (powered by xAI Grok model) on 2025-09-29.
+
+- name: Install GUI apps on Linux
+  block:
+    - name: Install GUI apps (Debian)
+      apt:
+        name:
+          - firefox
+          - vlc
+          - qbittorrent
+          - bitwarden
+          - obs-studio
+          - sublime-text
+          - vlc
+        state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian' and enable_gui
+
+    - name: Install GUI apps (RedHat)
+      dnf:
+        name:
+          - fedora-chromium
+          - vlc
+          - qbittorrent
+          - bitwarden
+          - obs-studio
+          - sublime-text
+          - vlc
+        state: present
+      when: ansible_os_family == 'RedHat' and enable_gui
+
+    - name: Install GUI apps (Arch)
+      pacman:
+        name:
+          - firefox
+          - vlc
+          - qbittorrent
+          - bitwarden
+          - obs-studio
+          - sublime-text
+          - vlc
+        state: present
+        update_cache: yes
+      when: ansible_os == 'Archlinux' and enable_gui
+
+    - name: Install yay for AUR (Arch)
+      command: yay -S --noconfirm yay
+      when: ansible_os == 'Archlinux' and enable_gui and 'yay' not in ansible_facts.packages
+
+    - name: Install missing GUI apps via yay (Arch)

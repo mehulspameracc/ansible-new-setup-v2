@@ -1,0 +1,23 @@
+---
+# Cloud-Init Role
+# Generates cloud-config.yaml for bootstrapping new instances with basics and playbook trigger.
+# Assisted by Cline (powered by xAI Grok model) on 2025-09-25.
+
+- name: Create cloud-config.yaml template
+  template:
+    src: cloud-config.j2
+    dest: "{{ cloud_init_path }}"
+    mode: '0644'
+  delegate_to: localhost
+  run_once: true
+  tags: cloud-init
+
+- name: Debug cloud-init config generated
+  debug:
+    msg: "Cloud-init config generated at {{ cloud_init_path }}. Use for VM provisioning."
+  delegate_to: localhost
+  run_once: true
+  tags: cloud-init
+
+# Note: Copy the generated cloud-config.yaml to your cloud provider or VM tool (e.g., Multipass, AWS user-data).
+# Example usage: multipass launch --name test --cloud-init {{ cloud_init_path }}

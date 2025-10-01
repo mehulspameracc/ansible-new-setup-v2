@@ -1,0 +1,84 @@
+---
+# Nix GUI Installs Role
+# Installs selected GUI apps via Nix flakes when enable_nix_gui is true.
+# This role is separate from the main gui-installs role for flexibility.
+# Assisted by Cline (powered by xAI Grok model) on 2025-09-30.
+
+- name: Check if Nix is installed
+  command: which nix
+  register: nix_installed
+  changed_when: false
+  failed_when: false
+  when: enable_nix_gui
+
+- name: Install Nix (if not installed and enable_nix_gui is true)
+  block:
+    - name: Download and run Nix installer
+      shell: |
+        curl -L https://nixos.org/nix/install | sh -s -- --daemon
+        . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+      args:
+        creates: /nix/var/nix/profiles/default
+      when: not nix_installed.rc == 0 and enable_nix_gui
+    - name: Add Nix to current shell session
+      command: . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+      when: not nix_installed.rc == 0 and enable_nix_gui
+  when: enable_nix_gui and not nix_installed.rc == 0
+
+- name: Ensure Nix flakes are enabled
+  lineinfile:
+    path: /etc/nix/nix.conf
+    regexp: '^experimental-features.*'
+    line: 'experimental-features = nix-command flakes'
+    state: present
+  when: enable_nix_gui and nix_installed.rc == 0
+  # notify: Restart Nix Daemon # Removed for now due to YAML issues
+
+- name: Create Nix flake directory for GUI apps
+  file:
+    path: "{{ ansible_env.HOME }}/nix_gui_flakes"
+    state: directory
+    mode: '0755'
+  when: enable_nix_gui and nix_installed.rc == 0
+
+- name: Copy Nix flake samples for GUI apps
+  copy:
+    src: "docs/nix_guide/samples/{{ item }}-flake.nix"
+    dest: "{{ ansible_env.HOME }}/nix_gui_flakes/{{ item }}-flake.nix"
+  loop:
+    - brave
+    - zed
+    - zen
+    - postman
+    - floorp
+    - ferdium
+  when: enable_nix_gui and nix_installed.rc == 0
+  # This will fail if a flake doesn't exist, which is fine for now.
+  # Consider making this more robust if more apps are added.
+
+- name: Install GUI apps using Nix develop
+  block:
+    - name: Install {{ item }} via Nix flake
+      command: nix develop --command true
+      args:
+        chdir: "{{ ansible_env.HOME }}/nix_gui_flakes/{{ item }}"
+      environment:
+        XDG_DATA_HOME: "{{ ansible_env.HOME }}/.local/share"
+        XDG_CONFIG_HOME: "{{ ansible_env.HOME }}/.config"
+        XDG_CACHE_HOME: "{{ ansible_env.HOME }}/.cache"
+      when: enable_nix_gui and nix_installed.rc == 0
+  loop:
+    - brave
+    - zed
+    - zen
+    - postman
+    - floorp
+    - ferdium
+  when: enable_nix_gui and nix_installed.rc == 0
+  tags: nix-gui-installs
+
+- name: Debug Nix GUI installs complete
+  debug:
+    msg: "Nix GUI apps installed on {{ ansible_os }} when enable_nix_gui is true."
+  when: enable_nix_gui and nix_installed.rc == 0
+  tags: nix-gui-installs

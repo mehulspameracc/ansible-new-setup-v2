@@ -1,0 +1,153 @@
+---
+# GUI Installs Role
+# Installs GUI apps on Linux/macOS when enable_gui is true.
+# Consolidated list based on user feedback.
+# Assisted by Cline (powered by xAI Grok model) on 2025-09-29.
+
+- name: Install GUI apps on Linux
+  block:
+    - name: Install GUI apps (Debian/Ubuntu)
+      apt:
+        name:
+          - firefox
+          - vlc
+          - qbittorrent
+          - bitwarden
+          - obs-studio
+          - obsidian # Added as per user list
+          - sublime-text
+          - ferdium # Added as per user list
+          - floorp # Added as per user list
+          - postman # Added as per user list
+          - waterfox # Added as per user list
+          - zed # Added as per user list
+          - zen-browser # Added as per user list
+          - vscode # Added as per user list
+          - zerotier # Added as per user list
+          - tailscale # Added as per user list
+          - firefox-esr # For stable Firefox, alongside firefox
+          # brave-browser # Often requires specific repos or flatpak
+          # ungoogled-chromium # Often requires specific repos or flatpak
+        state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian' and enable_gui
+
+    - name: Install GUI apps (Fedora/Rocky Linux)
+      dnf:
+        name:
+          - firefox
+          - vlc
+          - qbittorrent
+          - bitwarden
+          - obs-studio
+          - obsidian # Added as per user list
+          - sublime-text
+          - ferdium # Added as per user list
+          - floorp # Added as per user list
+          - postman # Added as per user list
+          - waterfox # Added as per user list
+          - zed # Added as per user list
+          - zen-browser # Added as per user list
+          - vscode # Added as per user list
+          - zerotier # Added as per user list
+          - tailscale # Added as per user list
+          # brave-browser # Often in flathub or rpmfusion
+          # ungoogled-chromium # Often in flathub or rpmfusion
+        state: present
+      when: ansible_os_family == 'RedHat' and enable_gui
+
+    - name: Install GUI apps (Arch Linux)
+      pacman:
+        name:
+          - firefox
+          - vlc
+          - qbittorrent
+          - bitwarden
+          - obs-studio
+          - obsidian # Added as per user list
+          - sublime-text
+          - ferdium # Added as per user list
+          - floorp # Added as per user list
+          - postman # Added as per user list
+          - waterfox # Added as per user list
+          - zed # Added as per user list
+          - zen-browser # Added as per user list
+          - vscode # Added as per user list
+          - zerotier # Added as per user list
+          - tailscale # Added as per user list
+          # brave-browser # Often in AUR or official repos
+          # ungoogled-chromium # Often in AUR or official repos
+        state: present
+        update_cache: yes
+      when: ansible_os == 'Archlinux' and enable_gui
+
+    - name: Install yay for AUR (Arch)
+      command: yay -S --noconfirm yay
+      when: ansible_os == 'Archlinux' and enable_gui and 'yay' not in ansible_facts.packages
+
+    - name: Install AUR GUI apps via yay (Arch)
+      command: yay -S --noconfirm brave-browser ungoogled-chromium
+      when: ansible_os == 'Archlinux' and enable_gui and 'yay' in ansible_facts.packages
+  tags: gui-installs
+
+- name: Install GUI apps on macOS
+  block:
+    - name: Install CLI tools (macOS) - Required by some GUI apps or for general use
+      homebrew:
+        name:
+          - bc
+          - cjson
+          - expat
+          - fontconfig
+          - gcc
+          - graphite2
+          - handbrake
+          - openjpeg
+        state: present
+      when: ansible_os == 'Darwin' and enable_gui
+
+    - name: Install GUI casks (macOS)
+      homebrew_cask:
+        name:
+          - bitwarden
+          - cheatsheet
+          - discord
+          - fig
+          - hiddenbar
+          - imageoptim
+          # iterm2 # Optional terminal, user preference
+          - itsycal
+          - karabiner-elements
+          - keycastr
+          - maccy
+          - macfuse
+          - obs # OBS Studio
+          - obsidian
+          - orion
+          - qbittorrent
+          - raycast
+          - rectangle
+          - sublime-text
+          - vlc
+          - ferdium
+          - floorp
+          - postman
+          - waterfox
+          - zed
+          - zen # Zen Browser
+          - vscode
+          - zerotier
+          - tailscale
+          - firefox # Firefox
+          - firefox-developer-edition # firefox-dev
+          - ungoogled-chromium
+          - brave-browser
+        state: present
+      when: ansible_os == 'Darwin' and enable_gui
+  tags: gui-installs
+
+- name: Debug GUI installs complete
+  debug:
+    msg: "GUI apps installed on {{ ansible_os }} when enable_gui is true."
+  when: enable_gui
+  tags: gui-installs

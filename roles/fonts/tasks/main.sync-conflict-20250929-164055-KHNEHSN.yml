@@ -1,0 +1,18 @@
+---
+# Fonts Role
+# Installs system-wide fonts from files/list-mt25 with skel support.
+# Assisted by Cline (powered by xAI Grok model) on 2025-09-29.
+
+- name: Create font destination directory (Linux)
+  ansible.builtin.file:
+    path: "/usr/share/fonts/list-mt25"
+    state: directory
+    mode: '0755'
+  when: ansible_os_family == 'Debian' or ansible_os == 'Archlinux'
+  tags: fonts
+
+- name: Copy fonts to system directory (Linux)
+  ansible.builtin.synchronize:
+    src: "files/list-mt25/"
+    dest: "/usr/share/fonts/list-mt25/"
+    recursive: yes

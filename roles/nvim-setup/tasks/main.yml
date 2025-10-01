@@ -1,0 +1,110 @@
+---
+# Nvim Setup Role
+# Installs latest Neovim via Bob, sets up multiple distros using NVIM_APPNAME, adds aliases.
+# Copies configs from files/dotfiles/ to user home and /etc/skel.
+# Assisted by Cline (powered by xAI Grok model) on 2025-09-25.
+
+- name: Install dependencies for Bob (curl, git)
+  package:
+    name:
+      - curl
+      - git
+    state: present
+  tags: nvim-setup
+
+- name: Install Neovim via Bob (Linux/macOS)
+  shell: |
+    curl -LO https://github.com/MordechaiHadad/bob/releases/latest/download/bob-linux-x86_64.zip
+    unzip bob-linux-x86_64.zip
+    sudo mv bob /usr/local/bin/bob
+    bob install stable --update
+  args:
+    creates: /usr/local/bin/bob
+  when: ansible_os != 'Darwin'  # For Linux
+  tags: nvim-setup
+
+- name: Install Neovim via Bob (macOS)
+  shell: |
+    curl -LO https://github.com/MordechaiHadad/bob/releases/latest/download/bob-macos.zip
+    unzip bob-macos.zip
+    sudo mv bob /usr/local/bin/bob
+    bob install stable --update
+  args:
+    creates: /usr/local/bin/bob
+  when: ansible_os == 'Darwin'
+  tags: nvim-setup
+
+- name: Verify Neovim installation
+  shell: nvim --version
+  register: nvim_version
+  changed_when: false
+  tags: nvim-setup
+
+- name: Debug Nvim version
+  debug:
+    var: nvim_version.stdout
+  tags: nvim-setup
+
+- name: Set up NVIM_APPNAME for distros
+  block:
+    - name: Create nvim distro dirs
+      file:
+        path: "{{ ansible_env.HOME }}/.config/nvim-{{ item }}"
+        state: directory
+        mode: '0755'
+      become_user: "{{ target_user }}"
+      loop: "{{ nvim_distros }}"
+      tags: nvim-setup
+
+    - name: Clone NvChad distro
+      git:
+        repo: https://github.com/NvChad/NvChad
+        dest: "{{ ansible_env.HOME }}/.config/nvim-nvchad"
+        version: main
+      become_user: "{{ target_user }}"
+      when: 'nvchad in nvim_distros'
+      tags: nvim-setup
+
+    - name: Clone LazyVim distro
+      git:
+        repo: https://github.com/LazyVim/starter
+        dest: "{{ ansible_env.HOME }}/.config/nvim-lazyvim"
+        version: main
+      become_user: "{{ target_user }}"
+      when: 'lazyvim in nvim_distros'
+      tags: nvim-setup
+
+    - name: Add Nvim aliases to .zshrc
+      lineinfile:
+        path: "{{ ansible_env.HOME }}/.zshrc"
+        line: "alias nvim-{{ item }}='NVIM_APPNAME={{ item }} nvim'"
+      become_user: "{{ target_user }}"
+      loop: "{{ nvim_distros }}"
+      tags: nvim-setup
+
+    - name: Add Nvim aliases to /etc/skel/.zshrc
+      lineinfile:
+        path: /etc/skel/.zshrc
+        line: "alias nvim-{{ item }}='NVIM_APPNAME={{ item }} nvim'"
+      loop: "{{ nvim_distros }}"
+      tags: nvim-setup
+
+# - name: Copy Nvim config to user home
+#   copy:
+#     src: files/dotfiles/init.lua  # Assume main config file
+#     dest: "{{ ansible_env.HOME }}/.config/nvim/init.lua"
+#     mode: '0644'
+#   become_user: "{{ target_user }}"
+#   tags: nvim-setup
+
+# - name: Copy Nvim config to /etc/skel
+#   copy:
+#     src: files/dotfiles/init.lua
+#     dest: /etc/skel/.config/nvim/init.lua
+#     mode: '0644'
+#   tags: nvim-setup
+
+- name: Debug Nvim setup complete
+  debug:
+    msg: "Neovim installed via Bob, distros {{ nvim_distros }} set up for {{ target_user }}."
+  tags: nvim-setup
