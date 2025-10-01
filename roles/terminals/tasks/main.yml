@@ -1,0 +1,132 @@
+---
+# Terminals Role
+# Installs Ghostty and Alacritty terminals with configs.
+# Assisted by Cline (powered by xAI Grok model) on 2025-09-29.
+
+- name: Install Alacritty
+  block:
+    - name: Install Alacritty (Debian)
+      apt:
+        name: alacritty
+        state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian'
+
+    - name: Install Alacritty (RedHat)
+      dnf:
+        name: alacritty
+        state: present
+      when: ansible_os_family == 'RedHat'
+
+    - name: Install Alacritty (Arch)
+      pacman:
+        name: alacritty
+        state: present
+        update_cache: yes
+      when: ansible_os == 'Archlinux'
+
+    - name: Install Alacritty (macOS)
+      homebrew:
+        name: alacritty
+        state: present
+      when: ansible_os == 'Darwin'
+  tags: terminals
+
+- name: Install Ghostty
+  block:
+    - name: Install Ghostty (macOS)
+      homebrew:
+        name: ghostty
+        state: present
+      when: ansible_os == 'Darwin'
+
+    - name: Install Ghostty (Linux)
+      block:
+        - name: Install Ghostty via cargo (Debian/RedHat/Arch)
+          command: cargo install ghostty
+          environment:
+            PATH: "{{ ansible_env.PATH }}:/root/.cargo/bin"
+          when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat' or ansible_os == 'Archlinux'
+
+        - name: Install Ghostty via yay (Arch)
+          command: yay -S ghostty-bin
+          when: ansible_os == 'Archlinux' and 'yay' in ansible_facts.packages
+      when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat' or ansible_os == 'Archlinux'
+  tags: terminals
+
+- name: Copy Ghostty config to user
+  ansible.builtin.file:
+    path: "{{ target_user_home }}/.config/ghostty/config"
+    state: touch
+    mode: '0644'
+  when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat' or ansible_os == 'Archlinux' or ansible_os == 'Darwin'
+  tags: terminals
+
+- name: Copy Ghostty config content
+  ansible.builtin.copy:
+    src: files/dotfiles/ghostty-config
+    dest: "{{ target_user_home }}/.config/ghostty/config"
+    mode: '0644'
+    remote_src: yes
+  when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat' or ansible_os == 'Archlinux' or ansible_os == 'Darwin'
+  tags: terminals
+
+- name: Copy Alacritty config to user
+  ansible.builtin.file:
+    path: "{{ target_user_home }}/.config/alacritty/alacritty.toml"
+    state: touch
+    mode: '0644'
+  when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat' or ansible_os == 'Archlinux' or ansible_os == 'Darwin'
+  tags: terminals
+
+- name: Copy Alacritty config content
+  ansible.builtin.copy:
+    src: files/dotfiles/alacritty.toml
+    dest: "{{ target_user_home }}/.config/alacritty/alacritty.toml"
+    mode: '0644'
+    remote_src: yes
+  when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat' or ansible_os == 'Archlinux' or ansible_os == 'Darwin'
+  tags: terminals
+
+- name: Copy Ghostty config to skel
+  ansible.builtin.file:
+    path: "/etc/skel/.config/ghostty/config"
+    state: touch
+    mode: '0644'
+  become: true
+  when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat' or ansible_os == 'Archlinux' or ansible_os == 'Darwin'
+  tags: terminals
+
+- name: Copy Ghostty config content to skel
+  ansible.builtin.copy:
+    src: files/dotfiles/ghostty-config
+    dest: "/etc/skel/.config/ghostty/config"
+    mode: '0644'
+    remote_src: yes
+  become: true
+  when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat' or ansible_os == 'Archlinux' or ansible_os == 'Darwin'
+  tags: terminals
+
+- name: Copy Alacritty config to skel
+  ansible.builtin.file:
+    path: "/etc/skel/.config/alacritty/alacritty.toml"
+    state: touch
+    mode: '0644'
+  become: true
+  when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat' or ansible_os == 'Archlinux' or ansible_os == 'Darwin'
+  tags: terminals
+
+- name: Copy Alacritty config content to skel
+  ansible.builtin.copy:
+    src: files/dotfiles/alacritty.toml
+    dest: "/etc/skel/.config/alacritty/alacritty.toml"
+    mode: '0644'
+    remote_src: yes
+  become: true
+  when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat' or ansible_os == 'Archlinux' or ansible_os == 'Darwin'
+  tags: terminals
+
+- name: Debug terminals installation complete
+  ansible.builtin.debug:
+    msg: "Ghostty and Alacritty installed and configured on {{ ansible_os }}."
+  tags: terminals

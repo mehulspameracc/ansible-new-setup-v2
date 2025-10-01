@@ -1,0 +1,29 @@
+---
+- name: Ansible Dev Environment Setup
+  hosts: all
+  become: true
+  gather_facts: true  # Gather facts for os-detection
+  vars_files:
+    - group_vars/all.yml
+
+  pre_tasks:
+    - name: Ensure group_vars loaded
+      debug:
+        msg: "Using target_user: {{ target_user }}, enabled_roles: {{ enabled_roles }}"
+
+  tasks:
+    - name: Run enabled roles
+      include_role:
+        name: "{{ item }}"
+      tags: "{{ item }}"
+      loop: "{{ enabled_roles | default(['os-detection', 'prerequisites', 'base-installs', 'docker-setup', 'shell-customize', 'nvim-setup', 'dev-envs', 'security-harden', 'cloud-init', 'fonts', 'terminals', 'gui-installs', 'nix-gui-installs']) }}"
+
+  post_tasks:
+    - name: Summary
+      debug:
+        msg:
+          - "Setup complete for {{ target_user }} on {{ ansible_hostname }}."
+          - "Portainer available at http://{{ ansible_default_ipv4.address }}:{{ portainer_port }}."
+          - "Run 'ansible-playbook site.yml --tags <role_name>' for individual roles."
+
+# Assisted by Cline (powered by xAI Grok model) on 2025-09-25.

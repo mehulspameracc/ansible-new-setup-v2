@@ -1,0 +1,64 @@
+---
+# Fonts Role
+# Installs system-wide fonts from files/list-mt25 with skel support.
+# Assisted by Cline (powered by xAI Grok model) on 2025-09-29.
+
+- name: Create font destination directory (Linux)
+  ansible.builtin.file:
+    path: "/usr/share/fonts/list-mt25"
+    state: directory
+    mode: '0755'
+  when: ansible_os_family == 'Debian' or ansible_os == 'Archlinux'
+  tags: fonts
+
+- name: Copy fonts to system directory (Linux)
+  ansible.builtin.synchronize:
+    src: "files/list-mt25/"
+    dest: "/usr/share/fonts/list-mt25/"
+    recursive: yes
+  when: ansible_os_family == 'Debian' or ansible_os == 'Archlinux'
+  tags: fonts
+
+- name: Update font cache (Linux)
+  ansible.builtin.command: fc-cache -fv
+  when: ansible_os_family == 'Debian' or ansible_os == 'Archlinux'
+  changed_when: true
+  tags: fonts
+
+- name: Create font destination directory (macOS)
+  ansible.builtin.file:
+    path: "/Library/Fonts/list-mt25"
+    state: directory
+    mode: '0755'
+  when: ansible_os == 'Darwin'
+  tags: fonts
+
+- name: Copy fonts to system directory (macOS)
+  ansible.builtin.synchronize:
+    src: "files/list-mt25/"
+    dest: "/Library/Fonts/list-mt25/"
+    recursive: yes
+  when: ansible_os == 'Darwin'
+  tags: fonts
+
+- name: Create user fonts directory in skel
+  ansible.builtin.file:
+    path: "/etc/skel/.local/share/fonts/list-mt25"
+    state: directory
+    mode: '0755'
+  when: font_enable
+  tags: fonts
+
+- name: Copy fonts to user skel directory
+  ansible.builtin.synchronize:
+    src: "files/list-mt25/"
+    dest: "/etc/skel/.local/share/fonts/list-mt25/"
+    recursive: yes
+  when: font_enable
+  tags: fonts
+
+- name: Debug fonts installation complete
+  ansible.builtin.debug:
+    msg: "Fonts installed to system and skel on {{ ansible_os }}."
+  when: font_enable
+  tags: fonts

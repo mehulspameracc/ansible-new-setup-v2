@@ -1,0 +1,11 @@
+---
+# Cloud-Init Dev Variant
+# Core dev setup: User, essentials + dev-envs, fonts, terminals (no GUI/Nix for mid-weight instances).
+
+target_user: "{{ target_user | default('ubuntu') }}"
+basic_apps: []  # Full basic apps handled by base-installs role
+enable_gui: false
+enable_nix_gui: false
+dev_envs: ['python', 'js', 'go', 'lua']  # All dev tools
+harden_level: "standard"  # Standard security
+playbook_repo_url: "{{ playbook_repo_url | default('https://github.com/mehulspameracc/ansible-new-setup-v2.git') }}"

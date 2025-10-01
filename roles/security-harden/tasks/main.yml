@@ -1,0 +1,161 @@
+---
+# Security Hardening Role
+# Applies security measures based on harden_level ('minimal' or 'full').
+# Includes firewall, SSH hardening, auto-updates, fail2ban.
+# Assisted by Cline (powered by xAI Grok model) on 2025-09-25.
+
+- name: Install fail2ban
+  package:
+    name: fail2ban
+    state: present
+  when: harden_level != 'none'
+  tags: security-harden
+
+- name: Start and enable fail2ban
+  systemd:
+    name: fail2ban
+    state: started
+    enabled: yes
+  when: harden_level != 'none'
+  tags: security-harden
+
+- name: Harden SSH config (PermitRootLogin no)
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PermitRootLogin'
+    line: 'PermitRootLogin no'
+    backup: yes
+  notify: restart sshd
+  when: harden_level == 'full'
+  tags: security-harden
+
+- name: Harden SSH config (PasswordAuthentication no)
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication'
+    line: 'PasswordAuthentication no'
+    backup: yes
+  notify: restart sshd
+  when: harden_level == 'full'
+  tags: security-harden
+
+- name: Harden SSH config (AllowUsers)
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?AllowUsers'
+    line: 'AllowUsers {{ target_user }}'
+    backup: yes
+  notify: restart sshd
+  when: harden_level == 'full'
+  tags: security-harden
+
+- name: Setup ufw firewall (Debian)
+  ufw:
+    state: enabled
+    policy: deny
+  when: ansible_os_family == 'Debian' and harden_level != 'none'
+  tags: security-harden
+
+- name: Allow SSH in ufw
+  ufw:
+    rule: allow
+    port: '22'
+    proto: tcp
+  when: ansible_os_family == 'Debian' and harden_level != 'none'
+  tags: security-harden
+
+- name: Allow Portainer in ufw
+  ufw:
+    rule: allow
+    port: "{{ portainer_port }}"
+    proto: tcp
+  when: ansible_os_family == 'Debian' and harden_level != 'none'
+  tags: security-harden
+
+- name: Allow service ports in ufw (excluding Portainer)
+  ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+  loop: "{{ service_ports | rejectattr('name', 'equalto', 'portainer') | list }}"
+  when: ansible_os_family == 'Debian' and harden_level != 'none'
+  tags: security-harden
+
+- name: Setup firewalld (RedHat/Fedora/Rocky)
+  systemd:
+    name: firewalld
+    state: started
+    enabled: yes
+  when: ansible_os_family == 'RedHat' and harden_level != 'none'
+  tags: security-harden
+
+- name: Allow SSH in firewalld
+  firewalld:
+    service: ssh
+    permanent: yes
+    state: enabled
+    immediate: yes
+  when: ansible_os_family == 'RedHat' and harden_level != 'none'
+  tags: security-harden
+
+- name: Allow Portainer in firewalld
+  firewalld:
+    port: "{{ portainer_port }}/tcp"
+    permanent: yes
+    state: enabled
+    immediate: yes
+  when: ansible_os_family == 'RedHat' and harden_level != 'none'
+  tags: security-harden
+
+- name: Allow service ports in firewalld (excluding Portainer)
+  firewalld:
+    port: "{{ item.port }}/{{ item.proto }}"
+    permanent: yes
+    state: enabled
+    immediate: yes
+  loop: "{{ service_ports | rejectattr('name', 'equalto', 'portainer') | list }}"
+  when: ansible_os_family == 'RedHat' and harden_level != 'none'
+  tags: security-harden
+
+- name: Enable auto-updates (Debian)
+  apt:
+    name: unattended-upgrades
+    state: present
+  when: ansible_os_family == 'Debian' and enable_auto_updates
+  tags: security-harden
+
+- name: Configure auto-updates (Debian)
+  lineinfile:
+    path: /etc/apt/apt.conf.d/50unattended-upgrades
+    line: 'Unattended-Upgrade::Allowed-Origins {"{{ ansible_distribution }}:{{ ansible_distribution_release }}";};'
+  when: ansible_os_family == 'Debian' and enable_auto_updates
+  tags: security-harden
+
+- name: Enable auto-updates (RedHat)
+  dnf:
+    name: dnf-automatic
+    state: present
+  when: ansible_os_family == 'RedHat' and enable_auto_updates
+  tags: security-harden
+
+- name: Configure dnf-automatic timer
+  systemd:
+    name: dnf-automatic.timer
+    state: started
+    enabled: yes
+  when: ansible_os_family == 'RedHat' and enable_auto_updates
+  tags: security-harden
+
+- name: Disable unnecessary services (avahi-daemon)
+  systemd:
+    name: avahi-daemon
+    state: stopped
+    enabled: no
+  when: harden_level == 'full'
+  ignore_errors: true
+  tags: security-harden
+
+- name: Debug security hardening complete
+  debug:
+    msg: "Security hardened at level {{ harden_level }} on {{ ansible_os }}."
+  tags: security-harden

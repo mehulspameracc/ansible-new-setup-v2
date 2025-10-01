@@ -1,0 +1,138 @@
+---
+# Shell Customization Role
+# Installs and configures Zsh (Oh My Zsh, plugins, Powerlevel10k) and Tmux (TPM, plugins).
+# Copies configs from files/dotfiles/ to /etc/skel/ and user home.
+# Assisted by Cline (powered by xAI Grok model) on 2025-09-25.
+
+- name: Install Zsh if not present
+  package:
+    name: zsh
+    state: present
+  tags: shell-customize
+
+- name: Clone Oh My Zsh
+  git:
+    repo: https://github.com/ohmyzsh/ohmyzsh.git
+    dest: "{{ target_user_home }}/.oh-my-zsh"
+    update: yes
+  become_user: "{{ target_user }}"
+  tags: shell-customize
+
+- name: Install Zsh plugins (autosuggestions)
+  git:
+    repo: https://github.com/zsh-users/zsh-autosuggestions
+    dest: "{{ target_user_home }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+  become_user: "{{ target_user }}"
+  tags: shell-customize
+
+- name: Install Zsh plugins (syntax-highlighting)
+  git:
+    repo: https://github.com/zsh-users/zsh-syntax-highlighting.git
+    dest: "{{ target_user_home }}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
+  become_user: "{{ target_user }}"
+  tags: shell-customize
+
+- name: Install Powerlevel10k theme
+  git:
+    repo: https://github.com/romkatv/powerlevel10k.git
+    dest: "{{ target_user_home }}/.oh-my-zsh/custom/themes/powerlevel10k"
+  become_user: "{{ target_user }}"
+  tags: shell-customize
+
+- name: Copy .zshrc template to user home
+  template:
+    src: files/dotfiles/.zshrc.j2
+    dest: "{{ target_user_home }}/.zshrc"
+    mode: '0644'
+  become_user: "{{ target_user }}"
+  tags: shell-customize
+
+- name: Copy .zshrc to /etc/skel for new users
+  template:
+    src: files/dotfiles/.zshrc.j2
+    dest: /etc/skel/.zshrc
+    mode: '0644'
+  tags: shell-customize
+
+- name: Set Zsh as default shell for user
+  user:
+    name: "{{ target_user }}"
+    shell: /bin/zsh
+  tags: shell-customize
+
+- name: Install Tmux if not present
+  package:
+    name: tmux
+    state: present
+  tags: shell-customize
+
+- name: Install TPM (Tmux Plugin Manager)
+  git:
+    repo: https://github.com/tmux-plugins/tpm
+    dest: "{{ target_user_home }}/.tmux/plugins/tpm"
+  become_user: "{{ target_user }}"
+  tags: shell-customize
+
+- name: Copy .tmux.conf to user home
+  copy:
+    src: files/dotfiles/.tmux.conf
+    dest: "{{ target_user_home }}/.tmux.conf"
+    mode: '0644'
+  become_user: "{{ target_user }}"
+  tags: shell-customize
+
+- name: Copy .tmux.conf to /etc/skel
+  copy:
+    src: files/dotfiles/.tmux.conf
+    dest: /etc/skel/.tmux.conf
+    mode: '0644'
+  tags: shell-customize
+
+- name: Install Tmux plugins (powerline)
+  git:
+    repo: https://github.com/tmux-plugins/tmux-powerline
+    dest: "{{ target_user_home }}/.tmux/plugins/tmux-powerline"
+  become_user: "{{ target_user }}"
+  tags: shell-customize
+
+- name: Copy tmux-powerline to /etc/skel
+  copy:
+    src: "{{ ansible_env.HOME }}/.tmux/plugins/tmux-powerline"
+    dest: /etc/skel/.tmux/plugins/tmux-powerline
+    mode: '0644'
+  tags: shell-customize
+
+- name: Copy tmux-powerline-theme default.sh to user home
+  copy:
+    src: files/dotfiles/default-powerline.sh
+    dest: "{{ ansible_env.HOME }}/.tmux/plugins/tmux-powerline/themes/default.sh"
+    mode: '0644'
+  become_user: "{{ target_user }}"
+  tags: shell-customize
+
+- name: Copy tmux-powerline-theme default.sh to /etc/skel
+  copy:
+    src: files/dotfiles/default-powerline.sh
+    dest: "/etc/skel/.tmux/plugins/tmux-powerline/themes/default.sh"
+    mode: '0644'
+  become_user: "{{ target_user }}"
+  tags: shell-customize
+
+- name: Install Tmux plugins (resurrect)
+  git:
+    repo: https://github.com/tmux-plugins/tmux-resurrect
+    dest: "{{ target_user_home }}/.tmux/plugins/tmux-resurrect"
+  become_user: "{{ target_user }}"
+  tags: shell-customize
+
+- name: Copy Tmux Plugins (resurrect) to /etc/skel
+  copy:
+    src: "{{ ansible_env.HOME }}/.tmux/plugins/tmux-resurrect"
+    dest: /etc/skel/.tmux/plugins/tmux-resurrect
+    mode: '0644'
+  tags: shell-customize
+
+- name: Debug shell customization complete
+  debug:
+    msg: "Zsh and Tmux customized for {{ target_user }}."
+  tags: shell-customize
