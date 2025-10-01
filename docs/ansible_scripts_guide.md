@@ -119,6 +119,59 @@ You will be prompted for remote server details and then the role selection menu.
 *   **Remote Changes**: Changes on the remote server will apply directly. You might need to log in and out of the remote server for shell changes.
 *   **Review Output**: Carefully review the output of the `ansible-playbook` command for any errors or warnings. The scripts will indicate success or failure.
 
+## Setting Up System Settings and VSCode
+
+### Using Ansible Roles
+
+The project includes roles that handle system settings and VSCode installation:
+
+- **VSCode Installation**: Included in the `gui-installs` role. When `enable_gui: true` in `group_vars/all.yml`, VSCode is installed via the package manager (apt, dnf, pacman, or Homebrew on macOS). Select the `gui-installs` role in the script menu to install VSCode along with other GUI apps like Firefox, VLC, Bitwarden, etc.
+
+- **System Settings and Dotfiles**: The `shell-customize` role copies dotfiles from `files/dotfiles/` (e.g., `.zshrc.j2`, `.tmux.conf`) to the user's home directory. This sets up shell configurations, Powerline, and other customizations. Select `shell-customize` in the menu.
+
+- **Development Environment**: The `dev-envs` role installs tools like Python (with UV and pip), Node.js (with NVM, Bun, PNPM), Go, and Lua. Select `dev-envs` to set up your coding environment.
+
+- **Fonts and Terminals**: `fonts` installs Nerd Fonts (e.g., Cascadia Code, JetBrains Mono). `terminals` sets up terminals like Alacritty or Kitty.
+
+To apply these:
+1. Run a local script (e.g., `python3 files/install_ansible.py`).
+2. Select relevant roles: `gui-installs` for VSCode, `shell-customize` for settings, `dev-envs` for tools.
+3. The playbook will install and configure everything.
+
+For VSCode extensions/settings, the current setup installs VSCode but doesn't configure extensions. You can manually install extensions or extend the `dev-envs` role with tasks to download settings.json from `files/dotfiles/vscode-settings.json` if added.
+
+### Using Nix for Declarative Setup
+
+Nix provides a declarative way to manage system settings and apps, especially useful for reproducible environments.
+
+- **Nix Installation and GUI Apps**: The `nix-gui-installs` role installs Nix and specific GUI apps (Brave, Zed, Zen Browser, Postman, Floorp, Ferdium) via flakes. Select `nix-gui-installs` in the script menu when `enable_nix_gui: true` in `group_vars/all.yml`.
+
+- **Nix Guide**: See `docs/nix_guide.md` for flake examples. These can be used to install VSCode and extensions declaratively:
+  ```
+  # Example flake.nix for VSCode
+  {
+    description = "VSCode with extensions";
+    inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    outputs = { self, nixpkgs }: let
+      system = "x86_64-linux";
+      pkgs = nixpkgs.legacyPackages.${system};
+    in {
+      devShells.${system}.default = pkgs.mkShell {
+        buildInputs = with pkgs; [
+          vscode
+          vscode-extensions.vadimcn.vscode-lldb
+          # Add more extensions
+        ];
+      };
+    };
+  }
+  ```
+  Run `nix develop` in the flake directory to enter the environment with VSCode and extensions.
+
+- **System Settings with Nix**: For full system config (e.g., home-manager for dotfiles/VSCode settings), use NixOS or home-manager. The project has flake samples in `docs/nix_guide/samples/`. Extend `nix-gui-installs` or use Nix standalone for user configs.
+
+**Recommendation**: Use Ansible for initial setup (install Nix/VSCode). Then Nix for ongoing declarative management of settings/extensions. Ansible is great for one-time installs; Nix for reproducibility.
+
 ## Troubleshooting
 
 *   **Script Truncation (Observed with Bash Scripts)**: If you encounter issues with the provided Bash scripts (`install_ansible.sh`, `deploy_ansible_remote.sh`) appearing truncated or not running correctly, it might be due to an environment-specific issue with how the scripts were saved or interpreted. In such cases, the Python versions (`install_ansible.py`, `deploy_ansible_remote.py`) are recommended as they are generally more robust across different environments and were created to address potential inconsistencies with shell script handling.
@@ -128,7 +181,8 @@ You will be prompted for remote server details and then the role selection menu.
     *   Ensure the SSH key path is correct and the key is properly set up on the remote server.
     *   Test the SSH connection manually: `ssh -i /path/to/your/key user@server_ip -p port`.
     *   Check firewall rules on both local and remote machines.
-*   **Permission Denied**: Ensure the user running the script has `sudo` privileges if Ansible installation is required.
+*
+  **Permission Denied**: Ensure the user running the script has `sudo` privileges if Ansible installation is required.
 *   **Role Selection Issues**: If a role seems to be skipped or not applied as expected, check the `site.yml` file and the individual role tasks to understand its dependencies or conditions.
 
 ## Choosing Between Bash and Python Scripts

@@ -118,5 +118,3 @@ runcmd:
 
 See `fixes.md` for known issues. For contributions: Edit roles/tasks/main.yml.
 
-## License
-MIT (or specify your preference).
