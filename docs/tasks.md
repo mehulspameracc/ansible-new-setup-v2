@@ -31,6 +31,26 @@ These are new tasks added during planning/implementation.
   Created: 2025-09-25 20:00  
   Description: Generate cloud-config.yaml for bootstrapping.
 
+- **Task: Create local Ansible installation script (files/install_ansible.sh)**  
+  Created: 2025-09-30 02:45  
+  Description: Develop a shell script in the `files` directory that installs Ansible on the local host system. The script should interactively prompt the user to select desired features from the Ansible project (e.g., specific roles, environments) and then execute the Ansible playbook to install the selected components to the local host system.
+
+- **Task: Create remote Ansible deployment script (files/deploy_ansible_remote.sh)**  
+  Created: 2025-09-30 02:45  
+  Description: Develop a shell script in the `files` directory that interactively prompts the user for remote server details (e.g., IP addresses, SSH credentials) and the features to be installed on those remote servers. The script should then execute the Ansible playbook against the specified targets to configure them accordingly.
+
+- **Task: Create multiple cloud-init config variants using group_vars (minimal, dev, full)**  
+  Created: 2025-10-02 01:00  
+  Description: Create separate group_vars files in files/cloud-init/ (minimal.yml, dev.yml, full.yml) to parameterize cloud-init generation for different profiles (basics, dev tools, full GUI/Nix).
+
+- **Task: Create cloud-init generator script (files/cloud-init/generate.py)**  
+  Created: 2025-10-02 01:00  
+  Description: Develop a Python script that prompts for variant selection, sets vars, runs the cloud-init Ansible task, and outputs named configs (e.g., cloud-config-minimal.yaml).
+
+- **Task: Update docs/ansible_scripts_guide.md with Cloud-Init Customization section**  
+  Created: 2025-10-02 01:00  
+  Description: Add section explaining variants, generator usage, and integration with provisioning tools.
+
 ## Updated Tasks
 (No updates yet. Log changes here with update date.)
 
@@ -219,17 +239,14 @@ These tasks have been finished.
   Completed: 2025-09-30 01:33  
   Description: Update site.yml to include 'nix-gui-installs' in the default enabled_roles list.
 
-## Created Tasks (Next Phase)
+- **Task: Create multiple cloud-init config variants using group_vars (minimal, dev, full)**  
+  Created: 2025-10-02 01:00  
+  Description: Create separate group_vars files in files/cloud-init/ (minimal.yml, dev.yml, full.yml) to parameterize cloud-init generation for different profiles (basics, dev tools, full GUI/Nix).
 
-- **Task: Create local Ansible installation script (files/install_ansible.sh)**  
-  Created: 2025-09-30 02:45  
-  Description: Develop a shell script in the `files` directory that installs Ansible on the local host system. The script should interactively prompt the user to select desired features from the Ansible project (e.g., specific roles, environments) and then execute the Ansible playbook to install the selected components to the local host system.
+- **Task: Create cloud-init generator script (files/cloud-init/generate.py)**  
+  Created: 2025-10-02 01:00  
+  Description: Develop a Python script that prompts for variant selection, sets vars, runs the cloud-init Ansible task, and outputs named configs (e.g., cloud-config-minimal.yaml).
 
-- **Task: Create remote Ansible deployment script (files/deploy_ansible_remote.sh)**  
-  Created: 2025-09-30 02:45  
-  Description: Develop a shell script in the `files` directory that interactively prompts the user for remote server details (e.g., IP addresses, SSH credentials) and the features to be installed on those remote servers. The script should then execute the Ansible playbook against the specified targets to configure them accordingly.
-
-<!-- 
-Next tasks
-For linux gui, make sure all gui apps are installed to all distros, not just few apps to 1 of the distros as you portrayed above. Apart from nix-guide and nix sample, create a new folder for nix under files, and save nix flakes etc there so user can copy paste and exicute them. 
-Other than that, your plan looks good, and you can start by updating the tasks.md with the new list and the old almost complete one. -->
+- **Task: Update docs/ansible_scripts_guide.md with Cloud-Init Customization section**  
+  Created: 2025-10-02 01:00  
+  Description: Add section explaining variants, generator usage, and integration with provisioning tools.

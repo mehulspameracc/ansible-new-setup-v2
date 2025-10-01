@@ -1,0 +1,11 @@
+---
+# Cloud-Init Minimal Variant
+# Basic setup: User, essentials, no GUI/Nix for lightweight instances.
+
+target_user: "{{ target_user | default('ubuntu') }}"
+basic_apps: ["curl", "git", "htop", "vim"]
+enable_gui: false
+enable_nix_gui: false
+dev_envs: []  # No dev tools
+harden_level: "basic"  # Minimal security
+playbook_repo_url: "{{ playbook_repo_url | default('https://github.com/mehulspameracc/ansible-new-setup-v2.git') }}"

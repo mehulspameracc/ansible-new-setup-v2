@@ -1,0 +1,11 @@
+---
+# Cloud-Init Full Variant
+# Complete setup: User, essentials + all roles (GUI, Nix GUI, dev-envs, fonts, terminals).
+
+target_user: "{{ target_user | default('ubuntu') }}"
+basic_apps: []  # Full basic apps handled by base-installs role
+enable_gui: true
+enable_nix_gui: true
+dev_envs: ['python', 'js', 'go', 'lua']  # All dev tools
+harden_level: "full"  # Full security hardening
+playbook_repo_url: "{{ playbook_repo_url | default('https://github.com/mehulspameracc/ansible-new-setup-v2.git') }}"
