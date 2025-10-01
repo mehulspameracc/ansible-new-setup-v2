@@ -165,8 +165,8 @@ display_menu() {
         # Read a single character
         read -rsn1 key
         case "$key" in
-            $'\x1b') # ESC sequence
-                read -rsn2 -t 0.1 key # Read the next 2 characters of the escape sequence
+            $'\x1b') # ESC sequence # Read the next 2 characters of the escape sequence
+                read -rsn2 -t 0.1 key 
                 case "$key" in
                     '[A') # Up arrow
                         ((current_index--))
