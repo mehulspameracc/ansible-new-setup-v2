@@ -1,0 +1,81 @@
+---
+- name: Ansible Dev Environment Setup (Explicit Roles)
+  hosts: all
+  become: true
+  gather_facts: true  # os-detection relies on this
+
+  pre_tasks:
+    # Load variables first, so they are available for roles if needed
+    - name: Load group_vars/all.yml
+      include_vars:
+        file: group_vars/all.yml
+
+    # Optional: Debug to see if variables load
+    - name: Debug target_user
+      debug:
+        msg: "target_user is: {{ target_user | default('NOT DEFINED in group_vars/all.yml') }}"
+
+  tasks:
+    # List all possible roles explicitly. Ansible will only run those
+    # whose tags are specified with --tags or whose dependencies are triggered.
+    # To run a specific role, use: ansible-playbook -i inventory/hosts.ini site_explicit.yml --tags <role_name>
+    - name: Run os-detection
+      include_role: name=os-detection
+      tags: os-detection
+
+    - name: Run prerequisites
+      include_role: name=prerequisites
+      tags: prerequisites
+
+    - name: Run base-installs
+      include_role: name=base-installs
+      tags: base-installs
+
+    - name: Run docker-setup
+      include_role: name=docker-setup
+      tags: docker-setup
+
+    - name: Run shell-customize
+      include_role: name=shell-customize
+      tags: shell-customize
+
+    - name: Run nvim-setup
+      include_role: name=nvim-setup
+      tags: nvim-setup
+
+    - name: Run dev-envs
+      include_role: name=dev-envs
+      tags: dev-envs
+
+    - name: Run security-harden
+      include_role: name=security-harden
+      tags: security-harden
+
+    - name: Run cloud-init
+      include_role: name=cloud-init
+      tags: cloud-init
+
+    - name: Run fonts
+      include_role: name=fonts
+      tags: fonts
+
+    - name: Run terminals
+      include_role: name=terminals
+      tags: terminals
+
+    - name: Run gui-installs
+      include_role: name=gui-installs
+      tags: gui-installs
+
+    - name: Run nix-gui-installs
+      include_role: name=nix-gui-installs
+      tags: nix-gui-installs
+
+  post_tasks:
+    - name: Summary
+      debug:
+        msg:
+          - "Setup complete for target_user: {{ target_user | default('N/A') }} on {{ ansible_hostname }}."
+          - "Portainer available at http://{{ ansible_default_ipv4.address | default('N/A') }}:{{ portainer_port | default('N/A') }}."
+
+# Assisted by Cline on 2025-10-02.
