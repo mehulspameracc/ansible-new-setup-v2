@@ -37,7 +37,7 @@ harden_level: minimal  # 'minimal' or 'full' for security role
 package_mgr: ""  # e.g., 'nala' for Debian, 'dnf' for Fedora, 'pacman' for Arch, 'brew' for macOS
 
 # OS-Specific
-non_root_user_groups: ['sudo', 'docker', 'wheel']  # Groups for new user (adjust for distro)
+non_root_user_groups: ['sudo', 'wheel']  # Groups for new user (adjust for distro). Docker group handled by docker-setup role.
 
 # Cloud-Init
 cloud_init_path: "{{ playbook_dir }}/cloud-config.yaml"  # Generated file path

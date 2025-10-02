@@ -3,17 +3,21 @@
 # Handles initial setup: user creation, sudo, repo tweaks, Nala/Brew install.
 # Assisted by Cline (powered by xAI Grok model) on 2025-09-25.
 
-- name: Create non-root user if enabled
+- name: Create non-root user if enabled (only when running as root)
   user:
     name: "{{ target_user }}"
-    groups: "{{ non_root_user_groups | join(',') }}"
+    # Add to sudo (Debian) or wheel (RedHat) by default.
+    # Docker group will be handled by the docker-setup role.
+    groups: "{{ 'sudo' if ansible_os_family == 'Debian' else 'wheel' }}"
     shell: /bin/bash  # Default to bash; change to zsh in shell role
     create_home: yes
     state: present
-  when: create_new_user
+  when:
+    - create_new_user
+    - ansible_user_id == 'root' # Only create user if running as root
   tags: prerequisites
 
-- name: Set up sudo for non-root user (Debian/Ubuntu)
+- name: Set up sudo for non-root user (Debian/Ubuntu) - Ensures group exists and has rights
   lineinfile:
     path: /etc/sudoers
     state: present
@@ -23,7 +27,7 @@
   when: ansible_os_family == 'Debian'
   tags: prerequisites
 
-- name: Set up sudo for non-root user (RedHat/Fedora/Rocky)
+- name: Set up sudo for non-root user (RedHat/Fedora/Rocky) - Ensures group exists and has passwordless rights
   lineinfile:
     path: /etc/sudoers
     state: present
@@ -31,6 +35,16 @@
     line: '%wheel ALL=(ALL) NOPASSWD: ALL'
     validate: 'visudo -cf %s'
   when: ansible_os_family == 'RedHat'
+  tags: prerequisites
+
+- name: Add current non-root user to sudo group if they lack privileges
+  user:
+    name: "{{ ansible_user_id }}"
+    groups: "{{ 'sudo' if ansible_os_family == 'Debian' else 'wheel' }}"
+    append: yes
+  when:
+    - ansible_user_id != 'root' # Don't run for root
+    - not ansible_user_sudo # Check if user already has sudo
   tags: prerequisites
 
 - name: Install Nala on Debian-based (direct from universe)
@@ -74,6 +88,13 @@
 - name: Install dnf-plugins-core for Fedora/Rocky
   package:
     name: dnf-plugins-core
+    state: present
+  when: ansible_os_family == 'RedHat'
+  tags: prerequisites
+
+- name: Install codecs on Fedora/Rocky
+  package:
+    name: libavcodec-freeworld
     state: present
   when: ansible_os_family == 'RedHat'
   tags: prerequisites
@@ -136,18 +157,22 @@
     - "{{ fonts_dir }}"
   tags: prerequisites
 
-- name: Prompt for new user name if needed
+- name: Prompt for new user name if needed (only when running as root)
   pause:
     prompt: "Enter username for new user on {{ inventory_hostname }} (default: {{ target_user }}): "
     echo: yes
   register: new_user_input
-  when: create_new_user and (ansible_user_id == 'root' or not ansible_user_sudo)
+  when:
+    - create_new_user
+    - ansible_user_id == 'root' # Only prompt if running as root
   tags: prerequisites
 
-- name: Set target_user from prompt if provided
+- name: Set target_user from prompt if provided (only when running as root)
   set_fact:
     target_user: "{{ new_user_input.user if new_user_input.user is defined and new_user_input.user != '' else target_user }}"
-  when: create_new_user and (ansible_user_id == 'root' or not ansible_user_sudo)
+  when:
+    - create_new_user
+    - ansible_user_id == 'root' # Only set fact if running as root
   tags: prerequisites
 
 - name: Add Fedora rpm-fusion free repo
