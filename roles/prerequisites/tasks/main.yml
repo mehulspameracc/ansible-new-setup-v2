@@ -2,22 +2,56 @@
 # Prerequisites Role
 # Handles initial setup: user creation, sudo, repo tweaks, Nala/Brew install.
 # Assisted by Cline (powered by xAI Grok model) on 2025-09-25.
+# Updated for broader OS support on 2025-10-02.
+
+- name: Update package cache (Debian/Ubuntu)
+  apt:
+    update_cache: yes
+  when: ansible_os_family == 'Debian'
+  tags: prerequisites
+
+- name: Update package cache (RedHat/CentOS/Fedora/Rocky)
+  dnf:
+    update_cache: yes
+  when: ansible_os_family == 'RedHat'
+  tags: prerequisites
+
+- name: Update package cache (Archlinux)
+  pacman:
+    update_cache: yes
+  when: ansible_distribution == 'Archlinux' or ansible_distribution == 'Arch'
+  tags: prerequisites
+
+- name: Update package cache (SUSE/openSUSE)
+  zypper:
+    refresh: yes
+  when: ansible_os_family == 'Suse'
+  tags: prerequisites
+
+- name: Update package cache (Alpine)
+  apk:
+    update_cache: yes
+  when: ansible_os_family == 'Alpine'
+  tags: prerequisites
+
+# Note: For other OS families, package cache update might be manual or not required.
 
 - name: Create non-root user if enabled (only when running as root)
   user:
     name: "{{ target_user }}"
-    # Add to sudo (Debian) or wheel (RedHat) by default.
+    # Add to sudo (Debian/Ubuntu) or wheel (RedHat/Fedora/Rocky) by default.
+    # For Arch, 'wheel' is common. For SUSE, 'users' or specific admin groups.
     # Docker group will be handled by the docker-setup role.
     groups: "{{ 'sudo' if ansible_os_family == 'Debian' else 'wheel' }}"
-    shell: /bin/bash  # Default to bash; change to zsh in shell role
+    shell: /bin/bash
     create_home: yes
     state: present
   when:
     - create_new_user
-    - ansible_user_id == 'root' # Only create user if running as root
+    - ansible_user_id == 'root'
   tags: prerequisites
 
-- name: Set up sudo for non-root user (Debian/Ubuntu) - Ensures group exists and has rights
+- name: Set up sudo for non-root user (Debian/Ubuntu)
   lineinfile:
     path: /etc/sudoers
     state: present
@@ -27,7 +61,7 @@
   when: ansible_os_family == 'Debian'
   tags: prerequisites
 
-- name: Set up sudo for non-root user (RedHat/Fedora/Rocky) - Ensures group exists and has passwordless rights
+- name: Set up sudo for non-root user (RedHat/Fedora/Rocky)
   lineinfile:
     path: /etc/sudoers
     state: present
@@ -37,25 +71,28 @@
   when: ansible_os_family == 'RedHat'
   tags: prerequisites
 
+# For Archlinux, 'wheel' group is used for sudo. Usually configured during install.
+# For SUSE, 'users' group or specific admin groups like 'wheel' might be used.
+# For Alpine, 'wheel' group is used, and 'sudo' package needs to be installed.
+
 - name: Add current non-root user to sudo group if they lack privileges
   user:
     name: "{{ ansible_user_id }}"
-    groups: "{{ 'sudo' if ansible_os_family == 'Debian' else 'wheel' }}"
+    groups: "{{ 'sudo' if ansible_os_family == 'Debian else 'wheel' }}"
     append: yes
   when:
-    - ansible_user_id != 'root' # Don't run for root
-    - not ansible_user_sudo # Check if user already has sudo
+    - ansible_user_id != 'root'
+    - not ansible_user_sudo
   tags: prerequisites
 
-- name: Install Nala on Debian-based (direct from universe)
+- name: Install Nala on Debian-based (if available and preferred)
   apt:
     name: nala
     state: present
-    update_cache: yes
-  when: ansible_os_family == 'Debian' and ansible_distribution_major_version | int >= 22
+  when: ansible_os_family == 'Debian' and ansible_distribution_major_version | int >= 22 # Nala requires Ubuntu 22.04+
   tags: prerequisites
 
-- name: Disable CD-ROM in sources.list (Debian)
+- name: Disable CD-ROM in sources.list (Debian/Ubuntu)
   lineinfile:
     path: /etc/apt/sources.list
     regexp: '^deb cdrom:'
@@ -63,12 +100,12 @@
   when: ansible_os_family == 'Debian'
   tags: prerequisites
 
-- name: Enable default repos and update (Debian)
+- name: Enable default repos and update (Debian/Ubuntu)
   lineinfile:
     path: /etc/apt/sources.list
     line: 'deb http://archive.ubuntu.com/ubuntu {{ ansible_distribution_release }} main restricted universe multiverse'
     create: yes
-  when: ansible_os_family == 'Debian'
+  when: ansible_os_family == 'Debian' and ansible_distribution == 'Ubuntu' # Be specific for Ubuntu repos
   tags: prerequisites
 
 - name: Tweak dnf.conf for performance (RedHat/Fedora/Rocky)
@@ -92,21 +129,50 @@
   when: ansible_os_family == 'RedHat'
   tags: prerequisites
 
+- name: Add Fedora rpm-fusion free repo
+  dnf:
+    name: https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ ansible_distribution_major_version }}.noarch.rpm
+    state: present
+  when: ansible_distribution == 'Fedora'
+  tags: prerequisites
+
+- name: Add Fedora rpm-fusion nonfree repo
+  dnf:
+    name: https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ ansible_distribution_major_version }}.noarch.rpm
+    state: present
+  when: ansible_distribution == 'Fedora'
+  tags: prerequisites
+
+- name: DNF upgrade and groupupdate for Fedora (after repos added)
+  dnf:
+    name: '*'
+    state: latest
+  when: ansible_distribution == 'Fedora'
+  tags: prerequisites
+
+- name: Swap FFmpeg for Fedora (ensure non-free is used)
+  shell: dnf -y swap ffmpeg-free ffmpeg --allowerasing
+  when: ansible_distribution == 'Fedora'
+  ignore_errors: yes
+  tags: prerequisites
+
 - name: Install codecs on Fedora/Rocky
   package:
     name: libavcodec-freeworld
     state: present
   when: ansible_os_family == 'RedHat'
+  ignore_errors: yes # Continue even if swap fails (e.g., ffmpeg-free not installed)
   tags: prerequisites
+
 
 - name: Install Brew on macOS if not present
   homebrew:
     name: homebrew
     state: present
-  when: ansible_os == 'Darwin'
+  when: ansible_os_family == 'Darwin'
   tags: prerequisites
 
-- name: Update package cache (general)
+- name: Update package cache (general - after specific updates)
   meta: flush_handlers
   tags: prerequisites
 
@@ -116,20 +182,24 @@
   args:
     creates: /nix/var/nix/profiles/default
   become: true
-  when: nix_multi_user | bool
+  when: nix_multi_user | bool and ansible_os_family != 'Darwin' # Nix on macOS is different, usually user-installed
   tags: prerequisites
 
-- name: Add Nix to PATH for user
+- name: Add Nix to PATH for user (Linux)
   lineinfile:
     path: "{{ target_user_home }}/.zshrc"
-    line: 'export PATH="/nix/var/nix/profiles/default/bin:$PATH"'
+    line: 'source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
+    create: yes
   become_user: "{{ target_user }}"
+  when: nix_multi_user | bool and ansible_os_family != 'Darwin'
   tags: prerequisites
 
-- name: Add Nix to /etc/skel/.zshrc
+- name: Add Nix to /etc/skel/.zshrc (Linux)
   lineinfile:
     path: /etc/skel/.zshrc
-    line: 'export PATH="/nix/var/nix/profiles/default/bin:$PATH"'
+    line: 'source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
+    create: yes
+  when: nix_multi_user | bool and ansible_os_family != 'Darwin'
   tags: prerequisites
 
 - name: Create user directories
@@ -164,7 +234,7 @@
   register: new_user_input
   when:
     - create_new_user
-    - ansible_user_id == 'root' # Only prompt if running as root
+    - ansible_user_id == 'root'
   tags: prerequisites
 
 - name: Set target_user from prompt if provided (only when running as root)
@@ -172,37 +242,10 @@
     target_user: "{{ new_user_input.user if new_user_input.user is defined and new_user_input.user != '' else target_user }}"
   when:
     - create_new_user
-    - ansible_user_id == 'root' # Only set fact if running as root
-  tags: prerequisites
-
-- name: Add Fedora rpm-fusion free repo
-  dnf:
-    name: https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ ansible_distribution_major_version }}.noarch.rpm
-    state: present
-  when: ansible_os_family == 'RedHat' and ansible_distribution == 'Fedora'
-  tags: prerequisites
-
-- name: Add Fedora rpm-fusion nonfree repo
-  dnf:
-    name: https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ ansible_distribution_major_version }}.noarch.rpm
-    state: present
-  when: ansible_os_family == 'RedHat' and ansible_distribution == 'Fedora'
-  tags: prerequisites
-
-- name: DNF upgrade and groupupdate for Fedora
-  dnf:
-    name: '*'
-    state: latest
-  when: ansible_os_family == 'RedHat' and ansible_distribution == 'Fedora'
-  tags: prerequisites
-
-- name: Swap FFmpeg for Fedora
-  shell: dnf -y swap ffmpeg-free ffmpeg --allowerasing
-  when: ansible_os_family == 'RedHat' and ansible_distribution == 'Fedora'
-  ignore_errors: yes
+    - ansible_user_id == 'root'
   tags: prerequisites
 
 - name: Debug prerequisites complete
   debug:
-    msg: "Prerequisites setup complete for {{ package_mgr }} on {{ ansible_os }}."
+    msg: "Prerequisites setup complete for {{ package_mgr }} on {{ ansible_distribution }} ({{ ansible_os_family }})."
   tags: prerequisites
