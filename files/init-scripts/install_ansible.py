@@ -107,14 +107,14 @@ def display_menu():
         print("-" * 80)
         for i in range(total_options):
             if i == current_index:
-                print("▶ ", end="")
+                print("✨ ", end="")
             else:
                 print("  ", end="")
 
             if i < num_options:
                 role_name = AVAILABLE_ROLES[i]
                 if i in selected_indices:
-                    print(f"{Colors.GREEN}[x] {role_name}{Colors.NC}")
+                    print(f"{Colors.GREEN}[✔] {role_name}{Colors.NC}")
                 else:
                     print(f"[ ] {role_name}")
             else: # Special options
@@ -132,7 +132,7 @@ def display_menu():
                         break
 
                 if is_selected:
-                    print(f"{Colors.GREEN}[x] {special_key} ({'all except cloud-init' if special_key == 'all' else 'all roles including cloud-init'}){Colors.NC}")
+                    print(f"{Colors.GREEN}[✔] {special_key} ({'all except cloud-init' if special_key == 'all' else 'all roles including cloud-init'}){Colors.NC}")
                 else:
                     print(f"[ ] {special_key} ({'all except cloud-init' if special_key == 'all' else 'all roles including cloud-init'})")
         print("-" * 80)

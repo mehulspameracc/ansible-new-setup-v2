@@ -163,39 +163,36 @@ def display_menu():
     def print_menu():
         os.system('clear' if os.name == 'posix' else 'cls') # Clear screen
         print(f"{Colors.BOLD}Select roles/features to install on the remote server:{Colors.NC}")
-        print(f"Use {Colors.CYAN}UP/DOWN{Colors.NC} arrows to navigate, {Colors.CYAN}SPACE{Colors.NC} to select/deselect, {Colors.CYAN}Enter{Colors.NC} to confirm.")
+        print(f"Use {Colors.CYAN}UP/DOWN{Colors.NC} arrows to navigate, {Colors.CYAN}SPACE{Colors.NC} to select/deselect, {Colors.CYAN}Enter{Colors.NC} to confirm, {Colors.CYAN}Q{Colors.NC} to quit.")
         print("-" * 80)
         for i in range(total_options):
-            if i == current_index:
-                print("✨ ", end="")
-            else:
-                print("  ", end="")
-
+            indicator = " ✨ " if i == current_index else "  "
             if i < num_options:
                 role_name = AVAILABLE_ROLES[i]
-                if i in selected_indices:
-                    print(f"{Colors.GREEN}[✔] {role_name}{Colors.NC}")
-                else:
-                    print(f"[ ] {role_name}")
+                status = "[✔]" if i in selected_indices else "[ ]"
+                color = Colors.GREEN if i in selected_indices else ""
+                print(f"{indicator} {color}{status}{Colors.NC} {role_name}")
             else: # Special options
                 special_key = special_options_order[i - num_options]
                 special_roles = special_options[special_key]
+                # Check if all roles in this special option are selected
                 is_selected = True
                 for r_name in special_roles:
                     try:
                         if AVAILABLE_ROLES.index(r_name) not in selected_indices:
                             is_selected = False
                             break
-                    except ValueError:
+                    except ValueError: # Should not happen if roles are consistent
                         is_selected = False
                         break
 
-                if is_selected:
-                    print(f"{Colors.GREEN}[x] {special_key} ({'all except cloud-init' if special_key == 'all' else 'all roles including cloud-init'}){Colors.NC}")
-                else:
-                    print(f"[ ] {special_key} ({'all except cloud-init' if special_key == 'all' else 'all roles including cloud-init'})")
+                status = "[✔]" if is_selected else "[ ]"
+                color = Colors.GREEN if is_selected else ""
+                desc = 'all except cloud-init' if special_key == 'all' else 'all roles including cloud-init'
+                print(f"{indicator} {color}{status}{Colors.NC} {special_key} ({desc})")
         print("-" * 80)
 
+    # Key reading logic differs for Windows and Linux/macOS
     if os.name == 'nt': # Windows
         import msvcrt
         while True:
@@ -209,6 +206,7 @@ def display_menu():
                 elif arrow_key == b'P': # Down
                     current_index = (current_index + 1) % total_options
             elif key == b'\r': # Enter
+                # Validate at least one selection
                 if not selected_indices and not any(
                     all(AVAILABLE_ROLES.index(r_name) in selected_indices for r_name in roles)
                     for roles in special_options.values() if roles
@@ -217,16 +215,22 @@ def display_menu():
                      time.sleep(2)
                      continue
                 break
+            elif key == b'q': # Quit
+                log_info("Exiting without changes.")
+                sys.exit(0)
             elif key == b' ': # Space
                 if current_index < num_options:
                     if current_index in selected_indices:
                         selected_indices.remove(current_index)
                     else:
                         selected_indices.add(current_index)
+                    # If a regular role is toggled, it might invalidate a special selection
+                    # For simplicity, we don't auto-deselect specials here, user can re-toggle
                 else: # Special option
                     special_key = special_options_order[current_index - num_options]
                     special_roles_list = special_options[special_key]
                     
+                    # Check if all roles in this special option are currently selected
                     all_selected = True
                     for r_name in special_roles_list:
                         try:
@@ -237,12 +241,14 @@ def display_menu():
                             pass
                     
                     if all_selected:
+                        # Deselect all roles in this special option
                         for r_name in special_roles_list:
                             try:
                                 selected_indices.remove(AVAILABLE_ROLES.index(r_name))
                             except ValueError:
                                 pass
                     else:
+                        # Select all roles in this special option
                         for r_name in special_roles_list:
                             try:
                                 selected_indices.add(AVAILABLE_ROLES.index(r_name))
@@ -275,6 +281,9 @@ def display_menu():
                          time.sleep(2)
                          continue
                     break
+                elif key == 'q': # Quit
+                    log_info("Exiting without changes.")
+                    sys.exit(0)
                 elif key == ' ': # Space
                     if current_index < num_options:
                         if current_index in selected_indices:
@@ -309,11 +318,13 @@ def display_menu():
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
+    # Process selected indices into role names
     selected_role_names = []
-    for idx in sorted(list(selected_indices)):
+    for idx in sorted(list(selected_indices)): # Sort for consistent order
         if idx < num_options:
             selected_role_names.append(AVAILABLE_ROLES[idx])
     
+    # Check if any special option is fully selected and add its roles
     for special_key, roles_list in special_options.items():
         is_fully_selected = True
         for r_name in roles_list:
@@ -325,10 +336,11 @@ def display_menu():
                 is_fully_selected = False
                 break
         if is_fully_selected:
+            # Add roles from this special option, avoiding duplicates if already added by individual selection
             for r_name in roles_list:
                 if r_name not in selected_role_names:
                     selected_role_names.append(r_name)
-            break
+            break # Assuming only one special option can be "active" in terms of full selection
 
     return selected_role_names
 
