@@ -15,11 +15,15 @@
         msg: "Using target_user: {{ group_all_vars.target_user }}, enabled_roles: {{ group_all_vars.enabled_roles }}"
 
   tasks:
+    - name: Determine roles to run
+      set_fact:
+        roles_to_run: "{{ group_all_vars.enabled_roles | default(['os-detection', 'prerequisites', 'base-installs', 'docker-setup', 'shell-customize', 'nvim-setup', 'dev-envs', 'security-harden', 'cloud-init', 'fonts', 'terminals', 'gui-installs', 'nix-gui-installs']) }}"
+
     - name: Run enabled roles
       include_role:
         name: "{{ item }}"
       tags: "{{ item }}"
-      loop: "{{ query('first_found', enabled_roles=['os-detection', 'prerequisites', 'base-inst
+      loop: "{{ roles_to_run }}"
 
   post_tasks:
     - name: Summary
@@ -29,4 +33,4 @@
           - "Portainer available at http://{{ ansible_default_ipv4.address }}:{{ group_all_vars.portainer_port }}."
           - "Run 'ansible-playbook site.yml --tags <role_name>' for individual roles."
 
-# Assisted by Cline (powered by xAI Grok model) on 2025-09-25.
+# Assisted by Cline on 2025-09-25.
