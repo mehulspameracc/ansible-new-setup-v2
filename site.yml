@@ -19,7 +19,7 @@
       include_role:
         name: "{{ item }}"
       tags: "{{ item }}"
-      loop: "{{ group_all_vars.enabled_roles | default(['os-detection', 'prerequisites', 'base-installs', 'docker-setup', 'shell-customize', 'nvim-setup', 'dev-envs', 'security-harden', 'cloud-init', 'fonts', 'terminals', 'gui-installs', 'nix-gui-installs']) }}"
+      loop: "{{ query('first_found', enabled_roles=['os-detection', 'prerequisites', 'base-inst
 
   post_tasks:
     - name: Summary
