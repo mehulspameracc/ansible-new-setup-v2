@@ -51,8 +51,30 @@ These are new tasks added during planning/implementation.
   Created: 2025-10-02 01:00  
   Description: Add section explaining variants, generator usage, and integration with provisioning tools.
 
+- **Task: Update Python Ansible scripts (install_ansible.py, deploy_ansible_remote.py) with numbered menu input**  
+  Created: 2025-10-02 15:30  
+  Description: Replace raw key input (msvcrt/termios) with a numbered list and input() prompts for better cross-platform compatibility and reliability. Add 'q' for quit.
+
+- **Task: Create inventory/ directory and hosts.ini file**  
+  Created: 2025-10-02 15:30  
+  Description: Ensure the inventory directory exists and a default hosts.ini file is present for Ansible.
+
+- **Task: Ensure group_vars/all.yml exists**  
+  Created: 2025-10-02 15:30  
+  Description: Verify that group_vars/all.yml is present and correctly configured.
+
+- **Task: Create proposed-tree.md directory structure documentation**  
+  Created: 2025-10-02 15:30  
+  Description: Document the expected Ansible project directory structure in proposed-tree.md.
+
+- **Task: Refine playbook structure - os-detection first, separate playbooks**  
+  Created: 2025-10-02 15:45  
+  Description: Modify playbooks to ensure os-detection runs first to inform subsequent roles. Consider creating separate playbooks for different configurations (e.g., local_setup.yml, remote_setup.yml, minimal_setup.yml).
+
 ## Updated Tasks
-(No updates yet. Log changes here with update date.)
+- **Task: Refine playbook structure - os-detection first, separate playbooks**  
+  Updated: 2025-10-02 16:16  
+  Description: Created new playbooks: local_setup.yml (for localhost), remote_setup.yml (for remote_servers), and minimal_setup.yml (for all with a minimal role set). Updated install_ansible.py, deploy_ansible_remote.py, install_ansible.sh, and deploy_ansible_remote.sh to use these new playbooks. The site.yml playbook remains as a general-purpose playbook.
 
 ## Completed Tasks
 These tasks have been finished.
@@ -241,12 +263,4 @@ These tasks have been finished.
 
 - **Task: Create multiple cloud-init config variants using group_vars (minimal, dev, full)**  
   Created: 2025-10-02 01:00  
-  Description: Create separate group_vars files in files/cloud-init/ (minimal.yml, dev.yml, full.yml) to parameterize cloud-init generation for different profiles (basics, dev tools, full GUI/Nix).
-
-- **Task: Create cloud-init generator script (files/cloud-init/generate.py)**  
-  Created: 2025-10-02 01:00  
-  Description: Develop a Python script that prompts for variant selection, sets vars, runs the cloud-init Ansible task, and outputs named configs (e.g., cloud-config-minimal.yaml).
-
-- **Task: Update docs/ansible_scripts_guide.md with Cloud-Init Customization section**  
-  Created: 2025-10-02 01:00  
-  Description: Add section explaining variants, generator usage, and integration with provisioning tools.
+  Description: Create separate group_vars files in files/cloud-init/ (minimal.yml, dev.yml, full.yml) to parameterize cloud-init

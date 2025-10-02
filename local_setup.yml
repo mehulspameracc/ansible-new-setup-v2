@@ -1,0 +1,35 @@
+---
+- name: Local Ansible Setup
+  hosts: localhost
+  become: true
+  gather_facts: true  # OS detection happens here
+
+  vars_files:
+    - group_vars/all.yml
+
+  pre_tasks:
+    - name: Ensure OS is detected and facts are gathered
+      debug:
+        msg: "OS Family: {{ ansible_os_family }}, Distribution: {{ ansible_distribution }}, Package Manager: {{ package_mgr | default('unknown') }}"
+
+    - name: Ensure target_user is defined
+      debug:
+        msg: "Using target_user: {{ target_user }}"
+      when: target_user is not defined
+
+  tasks:
+    - name: Run enabled roles for local setup
+      include_role:
+        name: "{{ item }}"
+      tags: "{{ item }}"
+      loop: "{{ enabled_roles | default(['os-detection', 'prerequisites', 'base-installs', 'docker-setup', 'shell-customize', 'nvim-setup', 'dev-envs', 'security-harden', 'fonts', 'terminals', 'gui-installs', 'nix-gui-installs']) }}"
+
+  post_tasks:
+    - name: Summary
+      debug:
+        msg:
+          - "Local setup complete for {{ target_user }} on {{ ansible_hostname }}."
+          - "Portainer available at http://{{ ansible_default_ipv4.address | default('127.0.0.1') }}:{{ portainer_port }}."
+          - "Run 'ansible-playbook local_setup.yml --tags <role_name>' for individual roles."
+
+# Assisted by Cline on 2025-10-02.

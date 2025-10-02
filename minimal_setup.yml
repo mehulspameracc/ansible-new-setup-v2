@@ -1,0 +1,34 @@
+---
+- name: Minimal Ansible Setup
+  hosts: all
+  become: true
+  gather_facts: true  # OS detection happens here
+
+  vars_files:
+    - group_vars/all.yml
+
+  pre_tasks:
+    - name: Ensure OS is detected and facts are gathered
+      debug:
+        msg: "OS Family: {{ ansible_os_family }}, Distribution: {{ ansible_distribution }}, Package Manager: {{ package_mgr | default('unknown') }}"
+
+    - name: Ensure target_user is defined
+      debug:
+        msg: "Using target_user: {{ target_user }}"
+      when: target_user is not defined
+
+  tasks:
+    - name: Run minimal set of roles
+      include_role:
+        name: "{{ item }}"
+      tags: "{{ item }}"
+      loop: "{{ enabled_roles | default(['os-detection', 'prerequisites', 'base-installs', 'shell-customize', 'fonts']) }}"
+
+  post_tasks:
+    - name: Summary
+      debug:
+        msg:
+          - "Minimal setup complete for {{ target_user }} on {{ ansible_hostname }}."
+          - "Run 'ansible-playbook minimal_setup.yml --tags <role_name>' for individual roles."
+
+# Assisted by Cline on 2025-10-02.

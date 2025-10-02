@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# Remote Ansible Deployment Script (Python)
-# This script installs Ansible (if not present), prompts for remote server details,
-# and then runs the Ansible playbook to configure the remote machine
-# based on user-selected features. Includes an interactive menu for role selection.
+# Local Ansible Installation and Configuration Script (Python)
+# This script installs Ansible (if not present) and then runs the Ansible playbook
+# to configure the local machine based on user-selected features.
+# Includes an interactive menu for role selection.
 # Assisted by Cline on 2025-09-30.
 
 import os
@@ -11,15 +11,12 @@ import subprocess
 import shutil
 import getpass
 import time
-import ipaddress
 
 # --- Configuration ---
 PLAYBOOK_DIR = os.path.dirname(os.path.abspath(__file__)) # Assumes script is in 'files'
 PLAYBOOK_DIR = os.path.dirname(PLAYBOOK_DIR) # Go up one level to project root
-INVENTORY_DIR = os.path.join(PLAYBOOK_DIR, "inventory")
-INVENTORY_FILE = os.path.join(INVENTORY_DIR, "remote_hosts.ini")
-# Default inventory template for a single remote server
-DEFAULT_INVENTORY_TEMPLATE = "[remote_servers]\n{server_hostname} ansible_host={server_ip} ansible_user={ssh_user} ansible_port={ssh_port} {ssh_key_option}\n"
+INVENTORY_FILE = os.path.join(PLAYBOOK_DIR, "inventory", "hosts.ini")
+DEFAULT_INVENTORY = "[localhost]\nlocalhost ansible_connection=local\n"
 
 # --- Color Codes for Output ---
 class Colors:
@@ -85,63 +82,6 @@ def install_ansible():
         sys.exit(1)
     log_success("Ansible installed successfully.")
 
-# --- Function to Prompt for Server Details ---
-def prompt_for_server_details():
-    log_info("Please enter details for the remote server:")
-    while True:
-        server_ip = input("Server Hostname/IP Address: ").strip()
-        if not server_ip:
-            log_warning("Server IP/Hostname cannot be empty.")
-            continue
-        try:
-            # Basic validation for IP address or hostname
-            ipaddress.ip_address(server_ip) # Checks for IPv4/IPv6
-            break
-        except ValueError:
-            # Not an IP, could be a hostname. For simplicity, we'll accept any non-empty string.
-            # More robust hostname validation could be added if needed.
-            if server_ip.replace('-', '').replace('.', '').isalnum() or ' ' not in server_ip : # Basic hostname check
-                 break
-            log_warning("Invalid IP address or hostname format. Please try again.")
-            continue
-
-    ssh_user = input("SSH Username (e.g., 'ubuntu', 'ec2-user'): ").strip()
-    if not ssh_user:
-        log_error("SSH Username cannot be empty.")
-        sys.exit(1)
-
-    while True:
-        ssh_port_input = input("SSH Port (default 22): ").strip()
-        if not ssh_port_input:
-            ssh_port = 22
-            break
-        try:
-            ssh_port = int(ssh_port_input)
-            if 1 <= ssh_port <= 65535:
-                break
-            else:
-                log_warning("Port must be between 1 and 65535.")
-        except ValueError:
-            log_warning("Invalid port number. Please enter a number.")
-    
-    ssh_key_path = input("Path to SSH Private Key (leave blank if using password): ").strip()
-    ssh_key_option = ""
-    if ssh_key_path:
-        if not os.path.exists(ssh_key_path):
-            log_error(f"SSH key file not found at '{ssh_key_path}'. Please check the path.")
-            # Ask if user wants to continue without key or re-enter
-            if not input("Continue without SSH key and use password prompt? (y/N): ").lower().startswith('y'):
-                sys.exit(1)
-            ssh_key_path = "" # Reset to blank if not continuing
-        else:
-            ssh_key_option = f"ansible_ssh_private_key_file='{ssh_key_path}'"
-            log_info(f"Using SSH key: {ssh_key_path}")
-    else:
-        log_info("No SSH key provided. Ansible will prompt for SSH password if key is not available or agent is not running.")
-    
-    return server_ip, ssh_user, ssh_port, ssh_key_option, ssh_key_path
-
-
 # --- Function to Display Interactive Menu ---
 AVAILABLE_ROLES = [
     "os-detection", "prerequisites", "base-installs", "docker-setup",
@@ -162,40 +102,37 @@ def display_menu():
 
     def print_menu():
         os.system('clear' if os.name == 'posix' else 'cls') # Clear screen
-        print(f"{Colors.BOLD}Select roles/features to install on the remote server:{Colors.NC}")
-        print(f"Use {Colors.CYAN}UP/DOWN{Colors.NC} arrows to navigate, {Colors.CYAN}SPACE{Colors.NC} to select/deselect, {Colors.CYAN}Enter{Colors.NC} to confirm.")
+        print(f"{Colors.BOLD}Select roles/features to install on your local machine:{Colors.NC}")
+        print(f"Use {Colors.CYAN}UP/DOWN{Colors.NC} arrows to navigate, {Colors.CYAN}SPACE{Colors.NC} to select/deselect, {Colors.CYAN}Enter{Colors.NC} to confirm, {Colors.CYAN}Q{Colors.NC} to quit.")
         print("-" * 80)
         for i in range(total_options):
-            if i == current_index:
-                print("✨ ", end="")
-            else:
-                print("  ", end="")
-
+            indicator = " > " if i == current_index else "   "
             if i < num_options:
                 role_name = AVAILABLE_ROLES[i]
-                if i in selected_indices:
-                    print(f"{Colors.GREEN}[✔] {role_name}{Colors.NC}")
-                else:
-                    print(f"[ ] {role_name}")
+                status = "[x]" if i in selected_indices else "[ ]"
+                color = Colors.GREEN if i in selected_indices else ""
+                print(f"{indicator} {color}{status}{Colors.NC} {role_name}")
             else: # Special options
                 special_key = special_options_order[i - num_options]
                 special_roles = special_options[special_key]
+                # Check if all roles in this special option are selected
                 is_selected = True
                 for r_name in special_roles:
                     try:
                         if AVAILABLE_ROLES.index(r_name) not in selected_indices:
                             is_selected = False
                             break
-                    except ValueError:
+                    except ValueError: # Should not happen if roles are consistent
                         is_selected = False
                         break
 
-                if is_selected:
-                    print(f"{Colors.GREEN}[x] {special_key} ({'all except cloud-init' if special_key == 'all' else 'all roles including cloud-init'}){Colors.NC}")
-                else:
-                    print(f"[ ] {special_key} ({'all except cloud-init' if special_key == 'all' else 'all roles including cloud-init'})")
+                status = "[x]" if is_selected else "[ ]"
+                color = Colors.GREEN if is_selected else ""
+                desc = 'all except cloud-init' if special_key == 'all' else 'all roles including cloud-init'
+                print(f"{indicator} {color}{status}{Colors.NC} {special_key} ({desc})")
         print("-" * 80)
 
+    # Key reading logic differs for Windows and Linux/macOS
     if os.name == 'nt': # Windows
         import msvcrt
         while True:
@@ -209,6 +146,7 @@ def display_menu():
                 elif arrow_key == b'P': # Down
                     current_index = (current_index + 1) % total_options
             elif key == b'\r': # Enter
+                # Validate at least one selection
                 if not selected_indices and not any(
                     all(AVAILABLE_ROLES.index(r_name) in selected_indices for r_name in roles)
                     for roles in special_options.values() if roles
@@ -217,16 +155,22 @@ def display_menu():
                      time.sleep(2)
                      continue
                 break
+            elif key == b'q': # Quit
+                log_info("Exiting without changes.")
+                sys.exit(0)
             elif key == b' ': # Space
                 if current_index < num_options:
                     if current_index in selected_indices:
                         selected_indices.remove(current_index)
                     else:
                         selected_indices.add(current_index)
+                    # If a regular role is toggled, it might invalidate a special selection
+                    # For simplicity, we don't auto-deselect specials here, user can re-toggle
                 else: # Special option
                     special_key = special_options_order[current_index - num_options]
                     special_roles_list = special_options[special_key]
                     
+                    # Check if all roles in this special option are currently selected
                     all_selected = True
                     for r_name in special_roles_list:
                         try:
@@ -237,12 +181,14 @@ def display_menu():
                             pass
                     
                     if all_selected:
+                        # Deselect all roles in this special option
                         for r_name in special_roles_list:
                             try:
                                 selected_indices.remove(AVAILABLE_ROLES.index(r_name))
                             except ValueError:
                                 pass
                     else:
+                        # Select all roles in this special option
                         for r_name in special_roles_list:
                             try:
                                 selected_indices.add(AVAILABLE_ROLES.index(r_name))
@@ -275,6 +221,9 @@ def display_menu():
                          time.sleep(2)
                          continue
                     break
+                elif key == 'q': # Quit
+                    log_info("Exiting without changes.")
+                    sys.exit(0)
                 elif key == ' ': # Space
                     if current_index < num_options:
                         if current_index in selected_indices:
@@ -309,11 +258,13 @@ def display_menu():
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
+    # Process selected indices into role names
     selected_role_names = []
-    for idx in sorted(list(selected_indices)):
+    for idx in sorted(list(selected_indices)): # Sort for consistent order
         if idx < num_options:
             selected_role_names.append(AVAILABLE_ROLES[idx])
     
+    # Check if any special option is fully selected and add its roles
     for special_key, roles_list in special_options.items():
         is_fully_selected = True
         for r_name in roles_list:
@@ -325,38 +276,26 @@ def display_menu():
                 is_fully_selected = False
                 break
         if is_fully_selected:
+            # Add roles from this special option, avoiding duplicates if already added by individual selection
             for r_name in roles_list:
                 if r_name not in selected_role_names:
                     selected_role_names.append(r_name)
-            break
+            break # Assuming only one special option can be "active" in terms of full selection
 
     return selected_role_names
 
+
 # --- Function to Create Inventory File ---
-def create_inventory_file(server_ip, ssh_user, ssh_port, ssh_key_option_val, ssh_key_path_val):
+def create_inventory_file():
     log_info(f"Creating inventory file at: {INVENTORY_FILE}")
-    os.makedirs(INVENTORY_DIR, exist_ok=True)
-    
-    server_hostname = f"remote-server-{server_ip.replace('.', '-').replace(':', '-')}" # Make hostname-safe
-
-    inventory_content = DEFAULT_INVENTORY_TEMPLATE.format(
-        server_hostname=server_hostname,
-        server_ip=server_ip,
-        ssh_user=ssh_user,
-        ssh_port=ssh_port,
-        ssh_key_option=ssh_key_option_val if ssh_key_option_val else ""
-    )
-    # Ensure no double newlines if ssh_key_option was empty
-    inventory_content = inventory_content.replace("\n\n", "\n")
-
-
+    os.makedirs(os.path.dirname(INVENTORY_FILE), exist_ok=True)
     with open(INVENTORY_FILE, "w") as f:
-        f.write(inventory_content)
+        f.write(DEFAULT_INVENTORY)
     log_success("Inventory file created.")
 
 # --- Main Execution ---
 def main():
-    log_info("Starting remote Ansible deployment script (Python)...")
+    log_info("Starting local Ansible setup script (Python)...")
     log_info(f"Playbook directory: {PLAYBOOK_DIR}")
 
     # 1. Check for Ansible
@@ -374,38 +313,40 @@ def main():
     else:
         log_warning("requirements.yml not found. Skipping collection installation.")
 
-    # 3. Prompt for server details
-    server_ip, ssh_user, ssh_port, ssh_key_option, ssh_key_path = prompt_for_server_details()
-
-    # 4. Display interactive menu for role selection
+    # 3. Display interactive menu for role selection
     selected_roles = display_menu()
     if not selected_roles:
         log_error("No roles selected. Exiting.")
         sys.exit(1)
     log_info(f"Selected roles: {', '.join(selected_roles)}")
 
-    # 5. Create inventory file
-    create_inventory_file(server_ip, ssh_user, ssh_port, ssh_key_option, ssh_key_path)
+    # 4. Create inventory file
+    create_inventory_file()
 
-    # 6. Run Ansible playbook
-    log_info(f"Running Ansible playbook with selected roles against {server_ip}...")
+    # 5. Run Ansible playbook
+    log_info("Running Ansible playbook with selected roles...")
     os.chdir(PLAYBOOK_DIR) # Change to playbook directory
 
     tags_argument = ""
     if selected_roles:
+        # Quote tags if they contain spaces or special characters, though unlikely for role names
         tags_argument = "--tags " + ",".join(f'"{role}"' for role in selected_roles)
 
+
+    # Run the playbook
+    # Using --ask-become-pass is good practice for roles that require sudo
     ansible_command = ["ansible-playbook", "-i", INVENTORY_FILE, "site.yml"]
     if tags_argument:
         ansible_command.extend(tags_argument.split())
-    ansible_command.extend(["--ask-become-pass", "--ask-pass"]) # For remote, need SSH password too
+    ansible_command.append("--ask-become-pass")
 
     if not run_command(ansible_command):
-        log_error(f"Ansible playbook execution failed on {server_ip}. Please check the output above for errors.")
+        log_error("Ansible playbook execution failed. Please check the output above for errors.")
         sys.exit(1)
     else:
-        log_success(f"Ansible playbook executed successfully on {server_ip}.")
-        log_info("The remote server should now be configured with the selected features.")
+        log_success("Ansible playbook executed successfully.")
+        log_info("Your local machine should now be configured with the selected features.")
+        log_info("You might need to log out and log back in for all changes (e.g., shell changes) to take full effect.")
 
 if __name__ == "__main__":
     main()
