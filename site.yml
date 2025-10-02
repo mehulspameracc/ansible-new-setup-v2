@@ -3,27 +3,30 @@
   hosts: all
   become: true
   gather_facts: true  # Gather facts for os-detection
-  vars_files:
-    - group_vars/all.yml
 
   pre_tasks:
+    - name: Load group_vars/all.yml explicitly
+      include_vars:
+        file: group_vars/all.yml
+        name: group_all_vars
+
     - name: Ensure group_vars loaded
       debug:
-        msg: "Using target_user: {{ target_user }}, enabled_roles: {{ enabled_roles }}"
+        msg: "Using target_user: {{ group_all_vars.target_user }}, enabled_roles: {{ group_all_vars.enabled_roles }}"
 
   tasks:
     - name: Run enabled roles
       include_role:
         name: "{{ item }}"
       tags: "{{ item }}"
-      loop: "{{ enabled_roles | default(['os-detection', 'prerequisites', 'base-installs', 'docker-setup', 'shell-customize', 'nvim-setup', 'dev-envs', 'security-harden', 'cloud-init', 'fonts', 'terminals', 'gui-installs', 'nix-gui-installs']) }}"
+      loop: "{{ group_all_vars.enabled_roles | default(['os-detection', 'prerequisites', 'base-installs', 'docker-setup', 'shell-customize', 'nvim-setup', 'dev-envs', 'security-harden', 'cloud-init', 'fonts', 'terminals', 'gui-installs', 'nix-gui-installs']) }}"
 
   post_tasks:
     - name: Summary
       debug:
         msg:
-          - "Setup complete for {{ target_user }} on {{ ansible_hostname }}."
-          - "Portainer available at http://{{ ansible_default_ipv4.address }}:{{ portainer_port }}."
+          - "Setup complete for {{ group_all_vars.target_user }} on {{ ansible_hostname }}."
+          - "Portainer available at http://{{ ansible_default_ipv4.address }}:{{ group_all_vars.portainer_port }}."
           - "Run 'ansible-playbook site.yml --tags <role_name>' for individual roles."
 
 # Assisted by Cline (powered by xAI Grok model) on 2025-09-25.

@@ -223,6 +223,90 @@ These tasks have been finished.
 
 - **Task: Add gui-installs to site.yml enabled_roles default**  
   Created: 2025-09-29 16:00  
+ ansible-playbook -i inventory/hosts-old.ini site.yml --ask-become-pass --ask-pass --tags os-detection,base-installs,docker-setup,fonts,nvim-setup,shell-customize,terminals,prerequisite -vvvv
+ansible-playbook [core 2.14.18]
+  config file = None
+  configured module search path = ['/home/docker/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
+  ansible python module location = /usr/lib/python3/dist-packages/ansible
+  ansible collection location = /home/docker/.ansible/collections:/usr/share/ansible/collections
+  executable location = /usr/bin/ansible-playbook
+  python version = 3.11.2 (main, Apr 28 2025, 14:11:48) [GCC 12.2.0] (/usr/bin/python3)
+  jinja version = 3.1.2
+  libyaml = True
+No config file found; using defaults
+SSH password:
+BECOME password[defaults to SSH password]:
+setting up inventory plugins
+host_list declined parsing /home/docker/repos/ansible-new-setup-v2/inventory/hosts-old.ini as it did not pass its verify_file() method
+script declined parsing /home/docker/repos/ansible-new-setup-v2/inventory/hosts-old.ini as it did not pass its verify_file() method
+auto declined parsing /home/docker/repos/ansible-new-setup-v2/inventory/hosts-old.ini as it did not pass its verify_file() method
+yaml declined parsing /home/docker/repos/ansible-new-setup-v2/inventory/hosts-old.ini as it did not pass its verify_file() method
+Parsed /home/docker/repos/ansible-new-setup-v2/inventory/hosts-old.ini inventory source with ini plugin
+Loading callback plugin default of type stdout, v2.0 from /usr/lib/python3/dist-packages/ansible/plugins/callback/default.py
+Skipping callback 'default', as we already have a stdout callback.
+Skipping callback 'minimal', as we already have a stdout callback.
+Skipping callback 'oneline', as we already have a stdout callback.
+
+PLAYBOOK: site.yml *****************************************************************************
+Positional arguments: site.yml
+verbosity: 4
+connection: smart
+timeout: 10
+ask_pass: True
+become_method: sudo
+become_ask_pass: True
+tags: ('os-detection', 'fonts', 'shell-customize', 'docker-setup', 'prerequisite', 'terminals', 'nvim-setup', 'base-installs')
+inventory: ('/home/docker/repos/ansible-new-setup-v2/inventory/hosts-old.ini',)
+forks: 5
+1 plays in site.yml
+Read vars_file 'group_vars/all.yml'
+Read vars_file 'group_vars/all.yml'
+Read vars_file 'group_vars/all.yml'
+
+PLAY [Ansible Dev Environment Setup] ***********************************************************
+ERROR! 'item' is undefined. 'item' is undefined
+ ansible-playbook -i inventory/hosts-old.ini site.yml --ask-become-pass --ask-pass --tags os-detection,base-installs,docker-setup,fonts,nvim-setup,shell-customize,terminals,prerequisite -vvvv
+ansible-playbook [core 2.14.18]
+  config file = None
+  configured module search path = ['/home/docker/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
+  ansible python module location = /usr/lib/python3/dist-packages/ansible
+  ansible collection location = /home/docker/.ansible/collections:/usr/share/ansible/collections
+  executable location = /usr/bin/ansible-playbook
+  python version = 3.11.2 (main, Apr 28 2025, 14:11:48) [GCC 12.2.0] (/usr/bin/python3)
+  jinja version = 3.1.2
+  libyaml = True
+No config file found; using defaults
+SSH password:
+BECOME password[defaults to SSH password]:
+setting up inventory plugins
+host_list declined parsing /home/docker/repos/ansible-new-setup-v2/inventory/hosts-old.ini as it did not pass its verify_file() method
+script declined parsing /home/docker/repos/ansible-new-setup-v2/inventory/hosts-old.ini as it did not pass its verify_file() method
+auto declined parsing /home/docker/repos/ansible-new-setup-v2/inventory/hosts-old.ini as it did not pass its verify_file() method
+yaml declined parsing /home/docker/repos/ansible-new-setup-v2/inventory/hosts-old.ini as it did not pass its verify_file() method
+Parsed /home/docker/repos/ansible-new-setup-v2/inventory/hosts-old.ini inventory source with ini plugin
+Loading callback plugin default of type stdout, v2.0 from /usr/lib/python3/dist-packages/ansible/plugins/callback/default.py
+Skipping callback 'default', as we already have a stdout callback.
+Skipping callback 'minimal', as we already have a stdout callback.
+Skipping callback 'oneline', as we already have a stdout callback.
+
+PLAYBOOK: site.yml *****************************************************************************
+Positional arguments: site.yml
+verbosity: 4
+connection: smart
+timeout: 10
+ask_pass: True
+become_method: sudo
+become_ask_pass: True
+tags: ('os-detection', 'fonts', 'shell-customize', 'docker-setup', 'prerequisite', 'terminals', 'nvim-setup', 'base-installs')
+inventory: ('/home/docker/repos/ansible-new-setup-v2/inventory/hosts-old.ini',)
+forks: 5
+1 plays in site.yml
+Read vars_file 'group_vars/all.yml'
+Read vars_file 'group_vars/all.yml'
+Read vars_file 'group_vars/all.yml'
+
+PLAY [Ansible Dev Environment Setup] ***********************************************************
+ERROR! 'item' is undefined. 'item' is undefined
   Completed: 2025-09-29 19:49  
   Description: Update site.yml to include 'gui-installs' in the default enabled_roles list.
 
